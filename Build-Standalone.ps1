@@ -92,6 +92,14 @@ $moduleBody
             else { Write-Warning "$($s.Name): written but not readable back (likely endpoint-security lock/quarantine). The script text parsed cleanly. Add an AV exclusion for the output folder or unblock the file." }
         }
         $built += $dest
+        # Copy a tool's signature sidecar (Common\Signatures\<tool>.signatures.json) beside its standalone so
+        # signature-driven rules keep working in a single-folder deployment. The signatures stay a DATA file
+        # and are NEVER inlined - inlining their IOC strings into the .ps1 would reintroduce AMSI self-quarantine.
+        $sigSrc = Join-Path $PSScriptRoot (Join-Path 'Common\Signatures' ($s.BaseName + '.signatures.json'))
+        if (Test-Path -LiteralPath $sigSrc) {
+            Copy-Item -LiteralPath $sigSrc -Destination (Join-Path $destDir ($s.BaseName + '.signatures.json')) -Force
+            Write-Host "    + $($pd.Name)\$($s.BaseName).signatures.json (signature data)" -ForegroundColor DarkGreen
+        }
     }
 }
 Write-Host ("Built {0} standalone tool(s) into {1}" -f $built.Count, $OutputDirectory) -ForegroundColor Cyan

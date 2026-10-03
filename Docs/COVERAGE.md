@@ -21,14 +21,14 @@ Legend: **[done]** shipped and tested, **[planned]** designed, not yet built.
 | done | Find-ADCSAbuse | T1649 | 4886/4887, 5136, 4768, 4104 | ESC1 SAN, dangerous template changes, cert-logon anomaly, ESC14 |
 | done | Find-NTLMRelay | T1557.001 | 4624, 4625, 4776, 4104 | Relayed/coerced machine accounts, NTLM harvesting bursts, NTLMv1 downgrade, relay/coercion tooling |
 | done | Get-IRAuditReadiness | n/a | auditpol, log metadata | Logging-posture gaps for the above |
-| planned | Find-DCShadow | T1207 | 4662, 4742, 5137 | Rogue DC registration (nTDSDSA, SPN add, replication push) |
-| planned | Find-ZerologonActivity | T1210 / CVE-2020-1472 | 4742, 5805, 5827 | Netlogon secure-channel downgrade / DC machine-account reset to empty |
-| planned | Find-GoldenGMSA | T1558 | 4662, 5136 | gMSA root-key (KDS) read / msDS-ManagedPassword access |
-| planned | Find-SIDHistoryInjection | T1134.005 | 4765, 4766, 4738, 5136 | sIDHistory added, mismatched domain SID |
-| planned | Find-ADReconnaissance | T1087, T1069, T1482 | 1644, 4662, 5156 | BloodHound/SharpHound LDAP sweeps, trust enumeration |
-| planned | Find-GPOAbuse | T1484.001 | 5136, 5137, 4663 | groupPolicyContainer / gPCFileSysPath / gPLink changes |
-| planned | Find-SkeletonKey | T1556.001 | 4673, 4769, 7045 | LSASS patch, downgrade-to-RC4 for all accounts |
-| planned | Find-TrustAbuse | T1482, T1134.005 | 4706/4707, 5136 | Trust creation/changes, SID filtering disabled |
+| done | Find-DCShadow | T1207 | 4742, 5137, 5141, 4662, 4104 | Rogue DC registration (DRS/GC SPN add, transient nTDSDSA create/delete, replication push rights, tooling) |
+| done | Find-ZerologonActivity | T1210 / CVE-2020-1472 | 4742, 5805, 5827-5831, 4104 | Anonymous machine-account password reset, vulnerable Netlogon channel (denied/allowed), auth-failure burst, tooling |
+| done | Find-GoldenGMSA | T1555 | 4662, 5136, 4104 | KDS root key read by a non-DC, gMSA managed-password retrieval, retrieval-principal changes, tooling |
+| done | Find-SIDHistoryInjection | T1134.005 | 4765, 4766, 4738, 4742, 5136, 4104 | Privileged SID injected into sIDHistory (4765/5136/4738), failed attempts, tooling |
+| done | Find-ADReconnaissance | T1087.002, T1069.002, T1482 | 1644, 4798, 4799, 4688, 4104 | BloodHound/SharpHound LDAP recon, mass group enumeration, recon tooling & processes |
+| done | Find-GPOAbuse | T1484.001 | 5136, 5137, 5145, 4663, 4688, 4104 | GPO CSE/ACL/gPLink changes, new GPOs, SYSVOL policy-file writes, GPO-abuse tooling |
+| done | Find-SkeletonKey | T1556.001 | 4768, 4673, 7045, 4697, 4104, 4688 | Kerberos RC4 downgrade burst (master-password tell), LSASS sensitive-privilege use, suspicious driver/service install, credential-tool signatures, multi-signal DC correlation |
+| done | Find-TrustAbuse | T1484.002, T1134.005 | 4706, 4707, 4716, 4865-4867, 5136, 4688, 4104 | Trust create/modify/remove, SID-filtering / treat-as-external weakening (cross-forest SID-history enabler), trust-key tooling |
 
 ## Initial access / execution / persistence / the rest of the chain (planned)
 

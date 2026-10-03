@@ -86,6 +86,19 @@ Admins, 518 Schema Admins; S-1-5-32-544 builtin Administrators), `MemberName` (m
   `Disposition`, often with details only in the rendered Message (read with `-IncludeMessage`).
 - `4899`/`4900` template or CA security changed.
 
+## Netlogon (domain controllers, System log, source NETLOGON)
+
+Used by Find-ZerologonActivity. These live in the **System** log, not Security, so pull it too.
+- `5805` - a session setup from a computer failed to authenticate; the referenced account is in the
+  rendered Message (e.g. `... the account(s) ... is DC01$`). A rapid burst for one machine account can
+  precede a Zerologon reset.
+- `5827` / `5828` - a vulnerable Netlogon secure-channel connection from a machine / trust account was
+  DENIED (hardening in enforcement). `5829` - a vulnerable connection was ALLOWED (enforcement off).
+  `5830` / `5831` - allowed by the group-policy exception list. The machine account is in the Message
+  (read with `-IncludeMessage`); these events only exist with the Aug-2020+ Netlogon update installed.
+- The Zerologon password reset itself surfaces as Security `4742` where a computer account's password is
+  changed by `ANONYMOUS LOGON` (SubjectUserSid `S-1-5-7`).
+
 ## PowerShell (Operational log)
 
 ### 4104 - script block logging

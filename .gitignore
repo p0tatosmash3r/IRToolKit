@@ -39,3 +39,6 @@ evidence/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# ---- Transient scratch (probe inputs / adversarial-review scaffolding; never part of the kit) ----
+scratchpad/

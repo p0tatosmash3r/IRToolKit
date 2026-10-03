@@ -388,7 +388,9 @@ $script:IRPrivilegedBuiltinSids = @{
     'S-1-5-32-557' = 'Incoming Forest Trust Builders'
     'S-1-5-32-560' = 'Windows Authorization Access Group'
     'S-1-5-32-562' = 'Distributed COM Users'
-    'S-1-5-32-568' = 'IIS_IUSRS'
+    # NOTE: IIS_IUSRS (S-1-5-32-568) is intentionally NOT listed - it is the IIS worker-process identity
+    # group, not a privilege-escalation path, and IIS setup routinely adds IUSR (S-1-5-17) to it, which
+    # generated benign "privileged group" findings on real DC logs.
     'S-1-5-32-569' = 'Cryptographic Operators'
     'S-1-5-32-573' = 'Event Log Readers'
     'S-1-5-32-574' = 'Certificate Service DCOM Access'

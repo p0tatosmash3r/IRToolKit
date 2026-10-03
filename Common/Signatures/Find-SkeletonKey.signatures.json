@@ -1,0 +1,17 @@
+{
+  "_comment": "RULE 4/RULE 3 signature data for Find-SkeletonKey.ps1. These strings are kept in this DATA file (not in the .ps1) on purpose: a detector that embeds verbatim Mimikatz command strings in its own script body gets quarantined by AMSI / EDR on load (the detector would trip the very signatures it hunts). The tool reads this file as data at run time; if it is missing, the tool still runs the behavioral rules (RC4 downgrade, LSASS privilege use, suspicious service/driver) and only skips the tooling-signature rule. Edit this file to tune signatures without touching the tool.",
+  "tooling": [
+    { "category": "crit", "value": "misc::skeleton",     "label": "Mimikatz skeleton-key command" },
+    { "category": "crit", "value": "Invoke-SkeletonKey",  "label": "PowerShell skeleton-key wrapper (Empire/weaponised)" },
+    { "category": "high", "value": "Invoke-Mimikatz",     "label": "PowerSploit Mimikatz runner" },
+    { "category": "bin",  "value": "mimikatz",            "label": "Mimikatz binary" },
+    { "category": "mod",  "value": "sekurlsa" },
+    { "category": "mod",  "value": "lsadump" },
+    { "category": "mod",  "value": "kerberos" },
+    { "category": "mod",  "value": "privilege" },
+    { "category": "mod",  "value": "crypto" },
+    { "category": "mod",  "value": "token" },
+    { "category": "mod",  "value": "misc" }
+  ],
+  "drivers": [ "mimidrv" ]
+}

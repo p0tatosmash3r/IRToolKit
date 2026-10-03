@@ -1,0 +1,46 @@
+[
+  { "TimeCreated": "2026-09-30T09:00:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "ObjectClass": "trustedDomain", "ObjectDN": "CN=ext.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "trustAttributes", "AttributeValue": "5", "OperationType": "%%14675", "OpCorrelationID": "op-1" },
+  { "TimeCreated": "2026-09-30T09:00:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "ObjectClass": "trustedDomain", "ObjectDN": "CN=ext.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "trustAttributes", "AttributeValue": "1", "OperationType": "%%14674", "OpCorrelationID": "op-1" },
+
+  { "TimeCreated": "2026-09-30T09:05:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "ObjectClass": "trustedDomain", "ObjectDN": "CN=partner.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "trustAttributes", "AttributeValue": "8", "OperationType": "%%14675", "OpCorrelationID": "op-2" },
+  { "TimeCreated": "2026-09-30T09:05:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "ObjectClass": "trustedDomain", "ObjectDN": "CN=partner.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "trustAttributes", "AttributeValue": "72", "OperationType": "%%14674", "OpCorrelationID": "op-2" },
+
+  { "TimeCreated": "2026-09-30T09:10:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "ObjectClass": "trustedDomain", "ObjectDN": "CN=partner.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "msDS-SupportedEncryptionTypes", "AttributeValue": "28", "OperationType": "%%14675", "OpCorrelationID": "op-3" },
+  { "TimeCreated": "2026-09-30T09:10:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "ObjectClass": "trustedDomain", "ObjectDN": "CN=partner.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "msDS-SupportedEncryptionTypes", "AttributeValue": "4", "OperationType": "%%14674", "OpCorrelationID": "op-3" },
+
+  { "TimeCreated": "2026-09-30T09:12:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "trustadmin", "SubjectUserSid": "S-1-5-21-1-2-3-1150", "ObjectClass": "trustedDomain", "ObjectDN": "CN=migrate.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "trustAttributes", "AttributeValue": "5", "OperationType": "%%14675", "OpCorrelationID": "op-4" },
+  { "TimeCreated": "2026-09-30T09:12:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "trustadmin", "SubjectUserSid": "S-1-5-21-1-2-3-1150", "ObjectClass": "trustedDomain", "ObjectDN": "CN=migrate.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "trustAttributes", "AttributeValue": "1", "OperationType": "%%14674", "OpCorrelationID": "op-4" },
+
+  { "TimeCreated": "2026-09-30T09:14:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "trustadmin", "SubjectUserSid": "S-1-5-21-1-2-3-1150", "ObjectClass": "trustedDomain", "ObjectDN": "CN=corp-child.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "trustAttributes", "AttributeValue": "8", "OperationType": "%%14675", "OpCorrelationID": "op-5" },
+  { "TimeCreated": "2026-09-30T09:14:00Z", "EventId": 5136, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "trustadmin", "SubjectUserSid": "S-1-5-21-1-2-3-1150", "ObjectClass": "trustedDomain", "ObjectDN": "CN=corp-child.example,CN=System,DC=corp,DC=local", "AttributeLDAPDisplayName": "trustAttributes", "AttributeValue": "40", "OperationType": "%%14674", "OpCorrelationID": "op-5" },
+
+  { "TimeCreated": "2026-09-30T09:20:00Z", "EventId": 4716, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "SubjectLogonId": "0x5f2a1", "DomainName": "legacy.example", "DomainSid": "S-1-5-21-9-9-9", "TdoType": "2", "TdoDirection": "3", "TdoAttributes": "1", "SidFilteringEnabled": "Disabled" },
+
+  { "TimeCreated": "2026-09-30T09:22:00Z", "EventId": 4716, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "ANONYMOUS LOGON", "SubjectUserSid": "S-1-5-7", "SubjectLogonId": "0x3e6", "DomainName": "autoreset.example", "DomainSid": "S-1-5-21-7-7-7", "TdoType": "2", "TdoDirection": "3", "TdoAttributes": "1", "SidFilteringEnabled": "Disabled" },
+
+  { "TimeCreated": "2026-09-30T09:30:00Z", "EventId": 4706, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "DomainName": "rogue.attacker", "DomainSid": "S-1-5-21-6-6-6", "TdoType": "2", "TdoDirection": "3", "TdoAttributes": "1", "SidFilteringEnabled": "Disabled" },
+
+  { "TimeCreated": "2026-09-30T09:35:00Z", "EventId": 4707, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "DomainName": "old.example", "DomainSid": "S-1-5-21-5-5-5" },
+
+  { "TimeCreated": "2026-09-30T09:40:00Z", "EventId": 4865, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectUserSid": "S-1-5-21-1-2-3-1107", "ForestRoot": "partner.example", "ForestRootSid": "S-1-5-21-4-4-4", "OperationId": "{opid-1}", "EntryType": "0", "TopLevelName": "evil.example" },
+
+  { "TimeCreated": "2026-09-30T09:45:00Z", "EventId": 4688, "Computer": "DC01", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "NewProcessName": "C:\\Windows\\System32\\netdom.exe", "CommandLine": "netdom trust corp.local /Domain:partner.example /enablesidhistory:Yes /usero:a /passwordo:b" },
+
+  { "TimeCreated": "2026-09-30T09:46:00Z", "EventId": 4104, "Computer": "DC01", "LogName": "Microsoft-Windows-PowerShell/Operational", "ProviderName": "Microsoft-Windows-PowerShell", "AuditResult": null, "ScriptBlockText": "$f = [System.DirectoryServices.ActiveDirectory.Forest]::GetForest($c); $f.SetSidFilteringStatus('partner.example', $false)", "Path": "" },
+
+  { "TimeCreated": "2026-09-30T09:50:00Z", "EventId": 4104, "Computer": "WS-ATTACK", "LogName": "Microsoft-Windows-PowerShell/Operational", "AuditResult": null, "ScriptBlockText": "Invoke-Mimikatz -Command '\"privilege::debug\" \"lsadump::trust /patch\"'", "Path": "" },
+
+  { "TimeCreated": "2026-09-30T09:52:00Z", "EventId": 4688, "Computer": "WS-ATTACK", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "eviladmin", "NewProcessName": "C:\\Tools\\Rubeus.exe", "CommandLine": "Rubeus.exe asktgt /user:CORP$ /service:krbtgt/corp.local /rc4:deadbeef /nowrap" },
+
+  { "TimeCreated": "2026-09-30T10:00:00Z", "EventId": 4104, "Computer": "WS-ADMIN", "LogName": "Microsoft-Windows-PowerShell/Operational", "AuditResult": null, "ScriptBlockText": "Get-Content 'C:\\notes\\lsadump-trust-notes.txt' | Select-String partner", "Path": "" },
+
+  { "TimeCreated": "2026-09-30T10:01:00Z", "EventId": 4688, "Computer": "WS-ADMIN", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "helpdesk", "NewProcessName": "C:\\Windows\\System32\\netdom.exe", "CommandLine": "netdom trust corp.local /Domain:partner.example /verify" },
+
+  { "TimeCreated": "2026-09-30T10:02:00Z", "EventId": 4688, "Computer": "WS-ADMIN", "LogName": "Security", "AuditResult": "Success", "SubjectUserName": "ir_analyst", "NewProcessName": "C:\\Windows\\System32\\certutil.exe", "CommandLine": "certutil.exe -hashfile rubeus.exe SHA256" },
+
+  { "TimeCreated": "2026-09-30T10:03:00Z", "EventId": 4104, "Computer": "WS-ADMIN", "LogName": "Microsoft-Windows-PowerShell/Operational", "AuditResult": null, "ScriptBlockText": "Remove-Item 'C:\\Quarantine\\rubeus.exe' -Force", "Path": "" },
+
+  { "TimeCreated": "2026-09-30T10:04:00Z", "EventId": 4104, "Computer": "WS-ADMIN", "LogName": "Microsoft-Windows-PowerShell/Operational", "AuditResult": null, "ScriptBlockText": "<# playbook note: an attacker would run netdom trust corp.local /Domain:x /quarantine:no to disable SID filtering - do NOT do this #>\nGet-ADTrust -Filter *", "Path": "" },
+
+  { "TimeCreated": "2026-09-30T10:05:00Z", "EventId": 4104, "Computer": "WS-ADMIN", "LogName": "Microsoft-Windows-PowerShell/Operational", "AuditResult": null, "ScriptBlockText": "# remediation: re-enable SID filtering that was turned off\n$f.SetSidFilteringStatus('partner.example', $true)", "Path": "" }
+]

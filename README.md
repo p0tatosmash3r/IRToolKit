@@ -43,7 +43,8 @@ wevtutil epl Security C:\Evidence\DC01-Security.evtx
 
 For a real AD incident, pull the Security log from every affected domain controller (each DC only records
 the requests it served, and DCs replicate to each other, so no single log is complete), the PowerShell
-Operational log from each for the event 4104 tooling rules, and — if AD CS is in scope — the CA host's
+Operational log from each for the event 4104 tooling rules, the **System** log from each DC (the Netlogon
+Zerologon events 5805/5827-5831 live there, not in Security), and — if AD CS is in scope — the CA host's
 Security log (certificate issuance events 4886/4887 live on the CA, not the DCs).
 
 Export on each source host (elevated):
@@ -51,6 +52,7 @@ Export on each source host (elevated):
 ```powershell
 # On each DC
 wevtutil epl Security C:\Evidence\DC01-Security.evtx
+wevtutil epl System   C:\Evidence\DC01-System.evtx
 wevtutil epl "Microsoft-Windows-PowerShell/Operational" C:\Evidence\DC01-PowerShell.evtx
 # On the CA host (if AD CS is in scope)
 wevtutil epl Security C:\Evidence\CA-Security.evtx
@@ -64,7 +66,7 @@ correctly; do NOT list the CA there (it is not a domain controller):
 
 ```powershell
 .\Invoke-IRHunt.ps1 -Phase AD `
-  -Path C:\Evidence\CA-Security.evtx, C:\Evidence\DC01-Security.evtx, C:\Evidence\DC02-Security.evtx, C:\Evidence\CA-PowerShell.evtx, C:\Evidence\DC01-PowerShell.evtx, C:\Evidence\DC02-PowerShell.evtx `
+  -Path C:\Evidence\CA-Security.evtx, C:\Evidence\DC01-Security.evtx, C:\Evidence\DC02-Security.evtx, C:\Evidence\DC01-System.evtx, C:\Evidence\DC02-System.evtx, C:\Evidence\CA-PowerShell.evtx, C:\Evidence\DC01-PowerShell.evtx, C:\Evidence\DC02-PowerShell.evtx `
   -DomainController DC01,DC02,DC01.corp.local,DC02.corp.local,10.0.0.11,10.0.0.12 `
   -OutputPath C:\Evidence\Report -Format All
 ```
@@ -74,6 +76,27 @@ Each tool reads the event IDs it needs from whichever file contains them, so mix
 run. Open the HTML report in `C:\Evidence\Report` and work top-down from Critical. Tool-specific options
 (`-HoneypotAccount`, `-ExcludeRequester`, `-ExpectedDomain`, `-PrivilegedUpn`, `-KnownReplicationAccount`)
 are not forwarded by the runner; run the individual tool for those (see each tool's `-?` help).
+
+If the collected logs are all in one folder, point `-Path` at the folder instead of listing files - it
+picks up every `.evtx` in it:
+
+```powershell
+.\Invoke-IRHunt.ps1 -Phase AD `
+  -Path C:\ADLogs `
+  -DomainController DC01,DC01.corp.local,10.0.0.10 `
+  -OutputPath C:\Results\Out -Format All
+```
+
+Add `-MinimumSeverity High` for a focused view that drops the routine Medium/Low noise (benign driver
+installs, legacy RC4, single admin actions) and keeps only High and Critical:
+
+```powershell
+.\Invoke-IRHunt.ps1 -Phase AD `
+  -Path C:\ADLogs `
+  -DomainController DC01,DC01.corp.local,10.0.0.10 `
+  -MinimumSeverity High `
+  -OutputPath C:\Results\Out-Focused -Format All
+```
 
 ## What is covered now (Active Directory phase)
 
@@ -89,6 +112,14 @@ are not forwarded by the runner; run the individual tool for those (see each too
 | Find-ShadowCredentials | T1556, T1098.001 | msDS-KeyCredentialLink writes (Whisker/pyWhisker); add-then-PKINIT takeover |
 | Find-ADCSAbuse | T1649 | AD CS ESC abuses: attacker-supplied SAN, dangerous template changes, cert-logon anomalies, altSecurityIdentities |
 | Find-NTLMRelay | T1557.001 | Relayed/coerced machine accounts, NTLM harvesting bursts, NTLMv1 downgrade, relay/coercion tooling |
+| Find-DCShadow | T1207 | Rogue DC registration: DRS/GC SPN added to a non-DC, transient nTDSDSA object, replication push rights, tooling |
+| Find-ZerologonActivity | T1210 / CVE-2020-1472 | Anonymous machine-account password reset, vulnerable Netlogon channel (5827-5831), auth-failure burst, tooling |
+| Find-GoldenGMSA | T1555 | KDS root key read by a non-DC, gMSA managed-password retrieval, retrieval-principal changes, tooling |
+| Find-SIDHistoryInjection | T1134.005 | Privileged SID injected into sIDHistory (4765/5136/4738), failed attempts, tooling |
+| Find-ADReconnaissance | T1087.002 / T1069.002 / T1482 | BloodHound/SharpHound LDAP recon (1644), mass group enumeration (4798/4799), recon tooling & processes |
+| Find-GPOAbuse | T1484.001 | GPO client-side-extension/ACL/gPLink changes (5136), new GPOs (5137), SYSVOL policy-file writes (5145/4663), GPO-abuse tooling (SharpGPOAbuse etc.) |
+| Find-SkeletonKey | T1556.001 | Kerberos RC4 encryption downgrade across many accounts (4768), LSASS sensitive-privilege use (4673), suspicious driver/service install (7045/4697), credential-theft tooling (4104/4688), multi-signal DC correlation |
+| Find-TrustAbuse | T1484.002 / T1134.005 | Trust create/modify/remove (4706/4707/4716/4865-4867), SID-filtering & treat-as-external weakening via trustAttributes transitions (5136), dangerous netdom/.NET trust commands, trust-key tooling (Mimikatz lsadump::trust, Rubeus) |
 | Get-IRAuditReadiness | n/a | Whether the audit policy and logs needed by the detections are actually enabled |
 
 See `Docs/COVERAGE.md` for the full attack-chain matrix and what is planned for other phases.

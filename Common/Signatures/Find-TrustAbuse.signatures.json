@@ -1,0 +1,13 @@
+{
+  "_comment": "RULE 5 offensive-tooling signatures for Find-TrustAbuse.ps1. Kept in this DATA file (not in the .ps1) so the detector does not carry verbatim Mimikatz command strings that AMSI/EDR would quarantine on load - see Find-SkeletonKey.signatures.json for the rationale. The tool reads this as data at run time; if it is missing, RULE 5 is skipped and the trust-object rules (1-4) still run. The benign-admin trust tools (netdom, .NET SetSidFilteringStatus, Set-ADObject) are detected inline in the tool itself - only the AV-sensitive offensive tokens live here.",
+  "tooling": [
+    { "category": "crit", "value": "lsadump::trust",  "label": "Mimikatz trust-key dump (trust-key theft -> inter-realm TGT forging)" },
+    { "category": "high", "value": "Invoke-Mimikatz", "label": "PowerSploit Mimikatz runner" },
+    { "category": "bin",  "value": "mimikatz",        "label": "Mimikatz binary" },
+    { "category": "bin",  "value": "rubeus",          "label": "Rubeus (cross-realm / forged inter-realm TGT with a trust key)" },
+    { "category": "mod",  "value": "lsadump" },
+    { "category": "mod",  "value": "kerberos" },
+    { "category": "mod",  "value": "sekurlsa" }
+  ],
+  "drivers": []
+}

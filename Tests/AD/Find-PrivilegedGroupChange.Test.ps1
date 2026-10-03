@@ -46,6 +46,16 @@ $b = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $benign; Qu
 Assert-IR ($b.Findings.Count -eq 0) 'benign-only subset is clean'
 Assert-IR ($b.Errors.Count -eq 0) 'benign-only subset has no stray errors'
 
+# Regression (real-log FP): IIS_IUSRS (S-1-5-32-568) is no longer treated as a privileged group - IIS setup
+# routinely adds IUSR (S-1-5-17) to it. A real built-in privileged group (Administrators, 544) still fires.
+$iis = @(
+    [pscustomobject]@{ TimeCreated = '2026-09-30T13:00:00Z'; EventId = 4732; Computer = 'DC01'; LogName = 'Security'; SubjectUserName = 'SYSTEM'; SubjectUserSid = 'S-1-5-18'; TargetUserName = 'IIS_IUSRS'; TargetSid = 'S-1-5-32-568'; MemberSid = 'S-1-5-17' }
+    [pscustomobject]@{ TimeCreated = '2026-09-30T13:01:00Z'; EventId = 4732; Computer = 'DC01'; LogName = 'Security'; SubjectUserName = 'eviladmin'; SubjectUserSid = 'S-1-5-21-1-2-3-1107'; TargetUserName = 'Administrators'; TargetSid = 'S-1-5-32-544'; MemberName = 'CN=rogue,CN=Users,DC=lab,DC=internal'; MemberSid = 'S-1-5-21-1-2-3-1200' }
+)
+$iisr = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $iis; Quiet = $true }
+Assert-IR (@($iisr.Findings | Where-Object { $_.Target -like '*IIS_IUSRS*' }).Count -eq 0) 'IIS_IUSRS membership change not flagged (not a privileged group)'
+Assert-IR (@($iisr.Findings | Where-Object { $_.Target -like '*Administrators*' }).Count -eq 1) 'built-in Administrators add still flagged'
+
 # Empty input.
 $e = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = @(); Quiet = $true }
 Assert-IR ($e.Findings.Count -eq 0 -and $e.Errors.Count -eq 0) 'empty input is clean and error-free'

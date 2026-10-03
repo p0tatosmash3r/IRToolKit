@@ -1,0 +1,19 @@
+[
+  { "TimeCreated": "2026-09-30T15:00:00.0000000Z", "EventId": 4765, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success", "TargetUserName": "eviluser", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-1200", "SourceUserName": "Domain Admins", "SourceDomainName": "CORP", "SourceSid": "S-1-5-21-111-222-333-512", "SubjectUserName": "eviladmin", "SubjectDomainName": "CORP" },
+
+  { "TimeCreated": "2026-09-30T15:05:00.0000000Z", "EventId": 5136, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success", "SubjectUserName": "eviladmin", "SubjectDomainName": "CORP", "ObjectDN": "CN=svc_backdoor,CN=Users,DC=corp,DC=local", "ObjectClass": "user", "AttributeLDAPDisplayName": "sIDHistory", "AttributeValue": "S-1-5-21-111-222-333-519", "OperationType": "%%14674" },
+
+  { "TimeCreated": "2026-09-30T15:10:00.0000000Z", "EventId": 4766, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Failure", "TargetUserName": "eviluser2", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-1210", "SourceSid": "S-1-5-21-111-222-333-512", "SubjectUserName": "eviladmin", "SubjectDomainName": "CORP", "Message": "An attempt to add SID History to an account failed. Source SID: S-1-5-21-111-222-333-512" },
+
+  { "TimeCreated": "2026-09-30T15:15:00.0000000Z", "EventId": 4738, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success", "TargetUserName": "svc_legacy", "TargetDomainName": "CORP", "SubjectUserName": "eviladmin", "SidHistory": "S-1-5-21-111-222-333-500" },
+
+  { "TimeCreated": "2026-09-30T15:20:00.0000000Z", "EventId": 4104, "Computer": "WS-ATTACK.corp.local", "LogName": "Microsoft-Windows-PowerShell/Operational", "ProviderName": "Microsoft-Windows-PowerShell", "AuditResult": null, "ScriptBlockText": "Add-ADDBSidHistory -SamAccountName eviluser -SidHistory S-1-5-21-111-222-333-519 -DatabasePath C:\\ntds\\ntds.dit", "Path": "" },
+
+  { "TimeCreated": "2026-09-20T09:00:00.0000000Z", "EventId": 4765, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success", "TargetUserName": "migrated1", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-1300", "SourceUserName": "migrated1", "SourceDomainName": "OLDDOM", "SourceSid": "S-1-5-21-999-888-777-1105", "SubjectUserName": "admt_svc", "SubjectDomainName": "CORP" },
+
+  { "TimeCreated": "2026-09-16T10:00:00.0000000Z", "EventId": 4738, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success", "TargetUserName": "normaluser", "TargetDomainName": "CORP", "SubjectUserName": "helpdesk", "SidHistory": "-" },
+
+  { "TimeCreated": "2026-09-16T11:00:00.0000000Z", "EventId": 5136, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success", "SubjectUserName": "helpdesk", "SubjectDomainName": "CORP", "ObjectDN": "CN=someuser,CN=Users,DC=corp,DC=local", "ObjectClass": "user", "AttributeLDAPDisplayName": "description", "AttributeValue": "Updated by helpdesk", "OperationType": "%%14674" },
+
+  { "TimeCreated": "2026-09-16T12:00:00.0000000Z", "EventId": 5136, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success", "SubjectUserName": "admin", "SubjectDomainName": "CORP", "ObjectDN": "CN=olddupe,CN=Users,DC=corp,DC=local", "ObjectClass": "user", "AttributeLDAPDisplayName": "sIDHistory", "AttributeValue": "S-1-5-21-111-222-333-512", "OperationType": "%%14675" }
+]

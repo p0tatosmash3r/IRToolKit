@@ -144,6 +144,7 @@ Run everything with `Tests\Invoke-IRTests.ps1`.
 ```
 IRToolKit/
   Common/            shared module + format file
+  Common/Signatures/ Find-<Tool>.signatures.json data files for AV-sensitive tooling signatures (see below)
   Docs/              conventions, coverage matrix, event reference, audit policy requirements
   Templates/         Find-Template.ps1 (copy this to start a new tool)
   Tools/AD/          one script per detection (this delivery)
@@ -152,5 +153,30 @@ IRToolKit/
                      CommandAndControl, Exfiltration, Impact)
   Tests/             harness, per-tool tests, sample data
   Invoke-IRHunt.ps1  runner that executes every tool in a phase and builds one consolidated report
-  Build-Standalone.ps1  inlines the module into each tool for single-file deployment
+  Build-Standalone.ps1  inlines the module into each tool for single-file deployment (and copies any
+                        matching Common\Signatures\<tool>.signatures.json beside the standalone)
 ```
+
+## Tooling signatures (inline vs. sidecar)
+
+Most tools match attacker-tool names (e.g. `Rubeus`, `SharpGPOAbuse`, `Inveigh`, `New-GPOImmediateTask`)
+with a plain inline string array in the script. That is the default - keep signatures inline.
+
+The exception is **AV-sensitive signatures**: a dense cluster of Mimikatz-style `module::command` tokens
+(`misc::skeleton`, `lsadump::trust`, `sekurlsa::...`, `Invoke-Mimikatz`) embedded verbatim in a script
+body is blocked at parse time by AMSI / EDR, so the detector would quarantine itself on load. When a
+tool needs those, its signatures go in a DATA file the tool READS (data is not scanned as script):
+
+  * File: `Common\Signatures\Find-<Tool>.signatures.json` (categorised `crit`/`high`/`bin`/`mod`; see an
+    existing one for the shape). The tool's `.ps1` body must contain NO verbatim IOC tokens (not even in
+    comments / help) - keep them in the json only.
+  * Resolution order in the tool: `-SignatureFile` override, then `Find-<Tool>.signatures.json` BESIDE the
+    script (a standalone build or local drop-in), then the central `Common\Signatures\` copy.
+  * Graceful degrade: if the file is missing / unreadable / invalid JSON, the tool disables only that
+    signature rule and still runs its behavioural rules, with ZERO stray error records. Parse the file in
+    an isolated runspace (a thrown `ConvertFrom-Json` error records to the caller's `-ErrorVariable` even
+    when caught - see the error-leak notes above).
+  * Match on INVOCATION, never a bare substring: a signature NAMED in a comment, a hunt query, a filename
+    or a tool's output must not fire.
+  * Standalone: `Build-Standalone.ps1` copies the sidecar beside each single-file build. Do NOT inline the
+    json into the standalone (a here-string of the tokens is still script text AMSI scans).
