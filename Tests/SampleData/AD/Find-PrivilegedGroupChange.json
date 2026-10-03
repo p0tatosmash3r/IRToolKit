@@ -1,0 +1,37 @@
+[
+  { "_comment": "IRToolKit sample for Find-PrivilegedGroupChange (CORP.LOCAL, DC01). Blocks: [A] 4728 add 'eviluser' to Domain Admins -> Rule1 Critical. [B] 4756 add 'eviluser2' to Enterprise Admins at 10:00 then 4757 remove at 10:10 by svc_compromised -> Rule3 stealth High + Rule1 Critical + Rule2 Medium. [C] 4732 add 'attacker' to built-in Administrators (S-1-5-32-544) -> Rule1 Critical. [D] 4728 add 'dnsguy' to DnsAdmins (privileged by capability) -> Rule1 High. [benign] 4728/4729 on non-privileged group 'All Staff' -> MUST NOT flag.",
+    "TimeCreated": "2026-09-28T08:15:00.0000000Z", "EventId": 4728, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success",
+    "SubjectUserSid": "S-1-5-21-111-222-333-1050", "SubjectUserName": "helpdeskguy", "SubjectDomainName": "CORP", "SubjectLogonId": "0x3e7a1",
+    "MemberName": "CN=eviluser,OU=Users,DC=corp,DC=local", "MemberSid": "S-1-5-21-111-222-333-1200",
+    "TargetUserName": "Domain Admins", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-512", "PrivilegeList": "-" },
+
+  { "TimeCreated": "2026-09-28T10:00:00.0000000Z", "EventId": 4756, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success",
+    "SubjectUserSid": "S-1-5-21-111-222-333-1180", "SubjectUserName": "svc_compromised", "SubjectDomainName": "CORP", "SubjectLogonId": "0x5f2b2",
+    "MemberName": "CN=eviluser2,OU=Users,DC=corp,DC=local", "MemberSid": "S-1-5-21-111-222-333-1201",
+    "TargetUserName": "Enterprise Admins", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-519", "PrivilegeList": "-" },
+
+  { "TimeCreated": "2026-09-28T10:10:00.0000000Z", "EventId": 4757, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success",
+    "SubjectUserSid": "S-1-5-21-111-222-333-1180", "SubjectUserName": "svc_compromised", "SubjectDomainName": "CORP", "SubjectLogonId": "0x5f2b2",
+    "MemberName": "CN=eviluser2,OU=Users,DC=corp,DC=local", "MemberSid": "S-1-5-21-111-222-333-1201",
+    "TargetUserName": "Enterprise Admins", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-519", "PrivilegeList": "-" },
+
+  { "TimeCreated": "2026-09-28T11:30:00.0000000Z", "EventId": 4732, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success",
+    "SubjectUserSid": "S-1-5-21-111-222-333-1050", "SubjectUserName": "helpdeskguy", "SubjectDomainName": "CORP", "SubjectLogonId": "0x3e7a1",
+    "MemberName": "CN=attacker,OU=IT,DC=corp,DC=local", "MemberSid": "S-1-5-21-111-222-333-1202",
+    "TargetUserName": "Administrators", "TargetDomainName": "Builtin", "TargetSid": "S-1-5-32-544", "PrivilegeList": "-" },
+
+  { "TimeCreated": "2026-09-28T13:45:00.0000000Z", "EventId": 4728, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success",
+    "SubjectUserSid": "S-1-5-21-111-222-333-1060", "SubjectUserName": "adminbob", "SubjectDomainName": "CORP", "SubjectLogonId": "0x4a1c0",
+    "MemberName": "CN=dnsguy,OU=Users,DC=corp,DC=local", "MemberSid": "S-1-5-21-111-222-333-1203",
+    "TargetUserName": "DnsAdmins", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-1101", "PrivilegeList": "-" },
+
+  { "TimeCreated": "2026-09-28T09:00:00.0000000Z", "EventId": 4728, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success",
+    "SubjectUserSid": "S-1-5-21-111-222-333-1070", "SubjectUserName": "hradmin", "SubjectDomainName": "CORP", "SubjectLogonId": "0x61d33",
+    "MemberName": "CN=newhire,OU=Users,DC=corp,DC=local", "MemberSid": "S-1-5-21-111-222-333-1300",
+    "TargetUserName": "All Staff", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-1500", "PrivilegeList": "-" },
+
+  { "TimeCreated": "2026-09-28T16:20:00.0000000Z", "EventId": 4729, "Computer": "DC01.corp.local", "LogName": "Security", "ProviderName": "Microsoft-Windows-Security-Auditing", "AuditResult": "Success",
+    "SubjectUserSid": "S-1-5-21-111-222-333-1070", "SubjectUserName": "hradmin", "SubjectDomainName": "CORP", "SubjectLogonId": "0x61d33",
+    "MemberName": "CN=leaver,OU=Users,DC=corp,DC=local", "MemberSid": "S-1-5-21-111-222-333-1301",
+    "TargetUserName": "All Staff", "TargetDomainName": "CORP", "TargetSid": "S-1-5-21-111-222-333-1500", "PrivilegeList": "-" }
+]

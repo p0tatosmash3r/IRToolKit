@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Configuration>
+  <ViewDefinitions>
+    <View>
+      <Name>IRToolKit.Finding</Name>
+      <ViewSelectedBy>
+        <TypeName>IRToolKit.Finding</TypeName>
+      </ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>Severity</Label><Width>13</Width></TableColumnHeader>
+          <TableColumnHeader><Label>TimeCreated</Label><Width>19</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Technique</Label><Width>10</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Title</Label><Width>44</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Account</Label><Width>24</Width></TableColumnHeader>
+          <TableColumnHeader><Label>SourceIp</Label><Width>15</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Events</Label><Width>6</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Description</Label></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><PropertyName>Severity</PropertyName></TableColumnItem>
+              <TableColumnItem><ScriptBlock>if ($_.TimeCreated) { $_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss') }</ScriptBlock></TableColumnItem>
+              <TableColumnItem><PropertyName>Technique</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Title</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Account</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>SourceIp</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>EventCount</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Description</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+    <View>
+      <Name>IRToolKit.Event</Name>
+      <ViewSelectedBy>
+        <TypeName>IRToolKit.Event</TypeName>
+      </ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader><Label>TimeCreated</Label><Width>19</Width></TableColumnHeader>
+          <TableColumnHeader><Label>EventId</Label><Width>7</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Computer</Label><Width>20</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Subject</Label><Width>22</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Target</Label><Width>22</Width></TableColumnHeader>
+          <TableColumnHeader><Label>IpAddress</Label><Width>15</Width></TableColumnHeader>
+          <TableColumnHeader><Label>Result</Label><Width>8</Width></TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem><ScriptBlock>if ($_.TimeCreated) { $_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss') }</ScriptBlock></TableColumnItem>
+              <TableColumnItem><PropertyName>EventId</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Computer</PropertyName></TableColumnItem>
+              <TableColumnItem><ScriptBlock>$_.SubjectUserName</ScriptBlock></TableColumnItem>
+              <TableColumnItem><ScriptBlock>if ($_.TargetUserName) { $_.TargetUserName } elseif ($_.Image) { $_.Image } else { $_.ServiceName }</ScriptBlock></TableColumnItem>
+              <TableColumnItem><ScriptBlock>if ($_.IpAddress) { $_.IpAddress } else { $_.SourceIp }</ScriptBlock></TableColumnItem>
+              <TableColumnItem><PropertyName>AuditResult</PropertyName></TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+  </ViewDefinitions>
+</Configuration>
