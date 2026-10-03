@@ -1,0 +1,41 @@
+# IRToolKit - keep real evidence, generated output, and local artifacts out of the repo.
+# The kit reads logs and writes reports; nothing an analyst produces at run time belongs in git.
+
+# ---- Generated reports / hunt output (Invoke-IRHunt, -OutputPath, Export-IRFindings) ----
+Results/
+results/
+Report/
+Reports/
+Output/
+out/
+IRHunt-*.csv
+IRHunt-*.json
+IRHunt-*.html
+Find-*-[0-9]*.csv
+Find-*-[0-9]*.json
+Find-*-[0-9]*.html
+Get-IRAuditReadiness-*.csv
+Get-IRAuditReadiness-*.json
+Get-IRAuditReadiness-*.html
+
+# ---- Single-file builds (regenerate with Build-Standalone.ps1) ----
+dist/
+
+# ---- Collected evidence / logs - NEVER commit real event data ----
+*.evtx
+*.evt
+Evidence/
+evidence/
+
+# ---- Exported / imported event sets that may contain real data ----
+# (the fake fixtures under Tests/SampleData are intentionally tracked and must stay)
+*.evtx.json
+
+# ---- Local / editor / OS cruft ----
+*.log
+.vscode/
+.vs/
+*.user
+Thumbs.db
+desktop.ini
+.DS_Store
