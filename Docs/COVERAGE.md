@@ -13,19 +13,19 @@ Legend: **[done]** shipped and tested, **[planned]** designed, not yet built.
 | done | Find-Kerberoasting | T1558.003 | 4769, 4104 | RC4/volume bursts, honeypot SPNs, AES opsec roasting, AD enrichment |
 | done | Find-ASREPRoasting | T1558.004 | 4768, 4104 | PreAuth=0 roast sweeps, user enumeration (0x6), honeypot |
 | done | Find-DCSync | T1003.006 | 4662, 4104 | Replication rights by non-DC; DC + sync-account exclusion |
-| done | Find-KerberosTicketAnomaly | T1558.001/.002, T1550.003 | 4768, 4769 | RC4 downgrade, TGS-without-TGT, krbtgt-as-client, realm mismatch |
+| done | Find-KerberosTicketAnomaly | T1558.001/.002, T1550.003 | 4768, 4769 | RC4 downgrade, TGS-without-TGT, krbtgt-as-client, realm mismatch, lower-case realm (forged-ticket artefact) |
 | done | Find-PasswordSpray | T1110.003 | 4625, 4771, 4768, 4624 | Distinct-target bursts per source; spray-then-success |
 | done | Find-PrivilegedGroupChange | T1098, T1078.002 | 4728/4732/4756, 4729/4733/4757 | Privileged group adds/removes; stealth add-then-remove |
 | done | Find-DelegationAbuse | T1558.003, T1134, T1484 | 5136, 4742, 4738 | Unconstrained, constrained+protocol-transition, RBCD |
 | done | Find-ShadowCredentials | T1556, T1098.001 | 5136, 4768, 4104 | msDS-KeyCredentialLink writes; add-then-PKINIT |
-| done | Find-ADCSAbuse | T1649 | 4886/4887, 5136, 4768, 4104 | ESC1 SAN, dangerous template changes, cert-logon anomaly, ESC14 |
+| done | Find-ADCSAbuse | T1649 | 4886/4887, 4882, 5136, 4768, KDC 39-41, 4104 | ESC1 SAN, ESC3/ESC2 on-behalf-of issuance, dangerous template changes, ESC7 CA ACL grants, cert-logon anomaly, KDC weak / mismatched mapping, ESC14 |
 | done | Find-NTLMRelay | T1557.001 | 4624, 4625, 4776, 4104 | Relayed/coerced machine accounts, NTLM harvesting bursts, NTLMv1 downgrade, relay/coercion tooling |
 | done | Get-IRAuditReadiness | n/a | auditpol, log metadata | Logging-posture gaps for the above |
 | done | Find-DCShadow | T1207 | 4742, 5137, 5141, 4662, 4104 | Rogue DC registration (DRS/GC SPN add, transient nTDSDSA create/delete, replication push rights, tooling) |
 | done | Find-ZerologonActivity | T1210 / CVE-2020-1472 | 4742, 5805, 5827-5831, 4104 | Anonymous machine-account password reset, vulnerable Netlogon channel (denied/allowed), auth-failure burst, tooling |
 | done | Find-GoldenGMSA | T1555 | 4662, 5136, 4104 | KDS root key read by a non-DC, gMSA managed-password retrieval, retrieval-principal changes, tooling |
 | done | Find-SIDHistoryInjection | T1134.005 | 4765, 4766, 4738, 4742, 5136, 4104 | Privileged SID injected into sIDHistory (4765/5136/4738), failed attempts, tooling |
-| done | Find-ADReconnaissance | T1087.002, T1069.002, T1482 | 1644, 4798, 4799, 4688, 4104 | BloodHound/SharpHound LDAP recon, mass group enumeration, recon tooling & processes |
+| done | Find-ADReconnaissance | T1087.002, T1069.002, T1482 | 1644, 4798, 4799, 4688, 4104 | BloodHound/SharpHound LDAP recon, mass / multi-host group enumeration, recon tooling & processes |
 | done | Find-GPOAbuse | T1484.001 | 5136, 5137, 5145, 4663, 4688, 4104 | GPO CSE/ACL/gPLink changes, new GPOs, SYSVOL policy-file writes, GPO-abuse tooling |
 | done | Find-SkeletonKey | T1556.001 | 4768, 4673, 7045, 4697, 4104, 4688 | Kerberos RC4 downgrade burst (master-password tell), LSASS sensitive-privilege use, suspicious driver/service install, credential-tool signatures, multi-signal DC correlation |
 | done | Find-TrustAbuse | T1484.002, T1134.005 | 4706, 4707, 4716, 4865-4867, 5136, 4688, 4104 | Trust create/modify/remove, SID-filtering / treat-as-external weakening (cross-forest SID-history enabler), trust-key tooling |

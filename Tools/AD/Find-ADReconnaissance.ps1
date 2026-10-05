@@ -16,9 +16,12 @@
         servicePrincipalName sweeps) is High; a high VOLUME of 1644 from one client in the window is
         Medium. 1644 requires the NTDS "Field Engineering" diagnostic (or expensive/inefficient-search
         logging) to be enabled - it is off by default.
-      * RULE 2 (High) - mass local-group / user-membership enumeration (Security 4798 / 4799) - a burst
-        from one principal in the window. SharpHound's session / local-admin collection enumerates the
-        Administrators group (and user memberships) across many hosts, producing a flood of 4799/4798.
+      * RULE 2 (High) - mass local-group / user-membership enumeration (Security 4798 / 4799). Two shapes:
+        ONE principal enumerating on >= -HostThreshold DIFFERENT hosts within the window (High/High -
+        SharpHound's local-admin / session collection walks the computer list, so the host spread is the
+        signature even when the event count is small), or >= -Threshold events from one principal in the
+        window (High/Medium, the volume form). 4798/4799 are logged by the enumerated host, so the
+        host-spread shape needs the member-host logs (SIEM export / several files) in one run.
       * RULE 3 (High) - BloodHound / PowerView tooling in a PowerShell script block (4104).
       * RULE 4 (High/Medium) - recon tooling executed as a process (4688): sharphound / adfind (High);
         dsquery / csvde / ldifde / nltest / "net group|user ... /domain" (Medium, needs command-line
@@ -66,6 +69,9 @@
     enumeration). Default 20.
 .PARAMETER WindowMinutes
     Sliding window length in minutes for the burst rules (default 10).
+.PARAMETER HostThreshold
+    Distinct hosts on which ONE principal enumerated local groups / memberships (4798/4799) within the
+    window to raise the SharpHound-style host-spread finding (RULE 2). Default 5.
 .PARAMETER ExcludeAccount
     Principals / hosts (users, machine accounts, or IPs) known to perform legitimate bulk enumeration -
     vulnerability scanners, inventory tools, EDR. Suppressed from the LDAP burst rule (matched against the
@@ -103,8 +109,9 @@ param(
     [ValidateSet('Csv', 'Json', 'Html', 'All')][string]$Format = 'Json',
     [switch]$Quiet,
 
-    [int]$Threshold = 20,
-    [int]$WindowMinutes = 10,
+    [ValidateRange(1, 1000000)][int]$Threshold = 20,
+    [ValidateRange(0.1, 100000)][double]$WindowMinutes = 10,
+    [ValidateRange(1, 100000)][int]$HostThreshold = 5,
     [string[]]$ExcludeAccount,
     [switch]$IncludeMachineAndSystem
 )
@@ -232,10 +239,13 @@ end {
         $sid = [string]$e.SubjectUserSid
         $proc = [string]$e.CallerProcessName
         if (Test-ReconExcluded @($subj, $proc, $sid)) { continue }
-        # Build the grouping key from the subject name, else the SID. An event with NEITHER cannot be
+        # Build the grouping key from the subject SID when there is one (a domain SID is the same on every
+        # host, whereas five hosts' LOCAL 'Administrator' accounts have five different SIDs and must not be
+        # merged into one SharpHound-style spread), else DOMAIN\name. An event with NEITHER cannot be
         # attributed to one principal, so it is NOT burstable (dropping it prevents unrelated blank-subject
         # enumeration across many hosts from fabricating one synthetic '(unknown)' burst).
-        $subjKey = if ($subj) { $subj.ToLowerInvariant() } elseif ($sid) { $sid.ToLowerInvariant() } else { $null }
+        $subjDom = [string]$e.SubjectDomainName
+        $subjKey = if ($sid -and $sid -match '^S-1-') { $sid.ToLowerInvariant() } elseif ($subj) { (($subjDom + '\' + $subj).TrimStart('\')).ToLowerInvariant() } else { $null }
         if (-not $subjKey) { continue }
         # SYSTEM / LOCAL SERVICE / NETWORK SERVICE and machine accounts enumerate local groups routinely
         # (GPO, SCCM, EDR). Exclude them from this burst rule by default; -IncludeMachineAndSystem keeps them.
@@ -244,9 +254,37 @@ end {
             if ($subj -and ($subj -match '(?i)^(SYSTEM|LOCAL SERVICE|NETWORK SERVICE)$' -or (Test-IRMachineAccount $subj))) { continue }
         }
         $e | Add-Member -NotePropertyName _SubjKey -NotePropertyValue $subjKey -Force
+        # Host identity = lower-cased first label (SRV0, srv0.corp.local are one host); blank stays $null so
+        # it is not counted as a distinct host by the spread shape.
+        $hostLabel = ((([string]$e.Computer).Trim() -split '\.')[0]).ToLowerInvariant()
+        if (-not $hostLabel) { $hostLabel = $null }
+        $e | Add-Member -NotePropertyName _Host -NotePropertyValue $hostLabel -Force
         $enumNorm.Add($e)
     }
+    # RULE 2 (host-spread shape) - ONE principal enumerating local groups on many DIFFERENT hosts in the
+    # window. An admin enumerates one host; SharpHound's local-admin / session collection walks the computer
+    # list, so the number of distinct enumerated hosts per principal is a sharper signal than the raw event
+    # count (and still fires in a small estate where the count never reaches -Threshold). 4798/4799 are
+    # logged by the host being enumerated, so this needs the member-host logs in one run.
+    $spreadSubjects = @{}
+    foreach ($b in @(Find-IRBurst -Events $enumNorm.ToArray() -GroupBy '_SubjKey' -DistinctProperty '_Host' -WindowMinutes $WindowMinutes -Threshold $HostThreshold)) {
+        $subj = [string]$b.Events[0].SubjectUserName; if (-not $subj) { $subj = '(unknown)' }
+        $spreadSubjects[$b.KeyString] = $true
+        $hosts = @($b.DistinctValues)
+        $procs = @($b.Events | ForEach-Object { $_.CallerProcessName } | Where-Object { $_ -and $_ -ne '-' } | Select-Object -Unique)
+        $eids = @($b.Events | ForEach-Object { [int]$_.EventId } | Select-Object -Unique)
+        $findings.Add((New-IRFinding -Tool $toolName -Severity 'High' -Confidence 'High' `
+                    -Technique 'T1069.002' -TechniqueName 'Permission Groups Discovery (Domain Groups)' -Title 'Local-group enumeration across multiple hosts by one principal (SharpHound-style)' `
+                    -Description ("{0} enumerated local group / user memberships on {1} different host(s) within {2} min ({3} event(s), events {4}{5}). Hosts: {6}. One principal walking the local Administrators group across the estate is the signature of SharpHound local-admin / session collection." -f `
+                        $subj, $hosts.Count, [Math]::Round(($b.WindowEnd - $b.WindowStart).TotalMinutes, 1), $b.EventCount, ($eids -join '/'), $(if ($procs.Count) { ' via ' + ((Get-IRFirst $procs 3) -join ', ') } else { '' }), ((Get-IRFirst $hosts 12) -join ', ')) `
+                    -Account $subj -Computer $b.Events[0].Computer `
+                    -EventIds $eids -Evidence (Get-IRFirst $b.Events 200) `
+                    -Recommendation 'Confirm whether the principal is an authorised scanner / inventory tool (add it to -ExcludeAccount). Otherwise treat as reconnaissance: identify the source host (4624 logon type 3 by the same account on the enumerated hosts) and correlate with LDAP recon (1644) and tooling from that host.'))
+    }
+    # RULE 2 (volume shape) - a burst of >= -Threshold events from one principal; subjects already reported
+    # by the host-spread shape are skipped so one collection run yields one finding.
     foreach ($b in @(Find-IRBurst -Events $enumNorm.ToArray() -GroupBy '_SubjKey' -WindowMinutes $WindowMinutes -Threshold $Threshold)) {
+        if ($spreadSubjects.ContainsKey($b.KeyString)) { continue }
         $subj = [string]$b.Events[0].SubjectUserName; if (-not $subj) { $subj = '(unknown)' }
         $procs = @($b.Events | ForEach-Object { $_.CallerProcessName } | Where-Object { $_ } | Select-Object -Unique)
         $eids = @($b.Events | ForEach-Object { [int]$_.EventId } | Select-Object -Unique)

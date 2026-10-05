@@ -84,6 +84,29 @@ Assert-IR (@($v6a.Findings | Where-Object { $_.SourceIp -eq 'fe80::dead:beef:2' 
 $v6ex = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $v6; Quiet = $true; ExcludeAccount = @('fe80::dead:beef:1') }
 Assert-IR (@($v6ex.Findings | Where-Object { $_.SourceIp -eq 'fe80::dead:beef:1' }).Count -eq 0) 'IPv6 client suppressed by -ExcludeAccount'
 
+# Regression (corpus): SharpHound local-admin collection = ONE principal on MANY hosts with few events
+# (11 events on 11 hosts in 10 s - below -Threshold 20) must fire the host-spread shape of RULE 2, once.
+$spread = @(0..10 | ForEach-Object { [pscustomobject]@{ TimeCreated = ([datetime]'2026-09-30T17:00:00Z').AddSeconds($_).ToString('o'); EventId = 4799; Computer = ("SRV$_.corp.local"); LogName = 'Security'; TargetUserName = 'Administrators'; SubjectUserName = 'collector'; SubjectUserSid = 'S-1-5-21-111-222-333-1111'; CallerProcessName = '-' } })
+$sp = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $spread; Quiet = $true }
+$spf = @($sp.Findings | Where-Object { $_.Title -like '*across multiple hosts*' })
+Assert-IR ($spf.Count -eq 1 -and $spf[0].Severity -eq 'High' -and $spf[0].Account -eq 'collector' -and $spf[0].Description -like '*11 different host*') 'one principal enumerating 11 hosts (11 events) fires the host-spread rule'
+Assert-IR (@($sp.Findings | Where-Object { $_.Title -like '*enumeration*' }).Count -eq 1 -and $sp.Errors.Count -eq 0) 'host-spread burst is reported once, error-free'
+# The same 11 events on ONE host are below both thresholds -> silent; -HostThreshold raises the bar.
+$single = @(0..10 | ForEach-Object { [pscustomobject]@{ TimeCreated = ([datetime]'2026-09-30T17:10:00Z').AddSeconds($_).ToString('o'); EventId = 4799; Computer = 'SRV1.corp.local'; LogName = 'Security'; TargetUserName = 'Administrators'; SubjectUserName = 'helpdesk1'; SubjectUserSid = 'S-1-5-21-111-222-333-1500'; CallerProcessName = 'C:\Windows\System32\net1.exe' } })
+Assert-IR (@((Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $single; Quiet = $true }).Findings).Count -eq 0) '11 enumerations on a single host stay silent'
+Assert-IR (@((Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $spread; Quiet = $true; HostThreshold = 20 }).Findings).Count -eq 0) '-HostThreshold 20 suppresses the 11-host spread'
+# A volume burst on ONE host still fires the volume shape (25 events, 1 host).
+$vol = @(0..24 | ForEach-Object { [pscustomobject]@{ TimeCreated = ([datetime]'2026-09-30T17:20:00Z').AddSeconds($_).ToString('o'); EventId = 4799; Computer = 'SRV2.corp.local'; LogName = 'Security'; TargetUserName = 'Administrators'; SubjectUserName = 'looper'; SubjectUserSid = 'S-1-5-21-111-222-333-1600'; CallerProcessName = 'C:\Temp\x.exe' } })
+$vf = @((Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $vol; Quiet = $true }).Findings | Where-Object { $_.Title -like '*enumeration*' })
+Assert-IR ($vf.Count -eq 1 -and $vf[0].Title -notlike '*across multiple hosts*') 'single-host volume burst still fires the volume shape only'
+
+# Regression (review): six hosts' LOCAL Administrator accounts (distinct SIDs) enumerating at the same minute are
+# six principals, not one spread; host-name forms (SRV9 / srv9.corp.local) are one host.
+$local = @(0..5 | ForEach-Object { [pscustomobject]@{ TimeCreated = ([datetime]'2026-09-30T18:00:00Z').AddSeconds($_).ToString('o'); EventId = 4799; Computer = ("WS$($_).corp.local"); LogName = 'Security'; TargetUserName = 'Administrators'; SubjectUserName = 'Administrator'; SubjectDomainName = ("WS$($_)"); SubjectUserSid = ("S-1-5-21-$($_)11-$($_)22-$($_)33-500"); CallerProcessName = 'C:\Windows\System32\svchost.exe' } })
+Assert-IR (@((Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $local; Quiet = $true }).Findings).Count -eq 0) 'local Administrator accounts on 6 hosts (distinct SIDs) are not merged into one spread'
+$forms = @(0..5 | ForEach-Object { [pscustomobject]@{ TimeCreated = ([datetime]'2026-09-30T18:10:00Z').AddSeconds($_).ToString('o'); EventId = 4799; Computer = $(if ($_ % 2) { 'SRV9' } else { 'srv9.corp.local' }); LogName = 'Security'; TargetUserName = 'Administrators'; SubjectUserName = 'collector'; SubjectUserSid = 'S-1-5-21-111-222-333-1111'; CallerProcessName = '-' } })
+Assert-IR (@((Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $forms; Quiet = $true }).Findings).Count -eq 0) 'SRV9 / srv9.corp.local count as one host (no spread from name forms)'
+
 # Regression (Minor 1): RULE 1 honours -ExcludeAccount against the 1644 issuing account, not only the IP.
 $lu = @([pscustomobject]@{ TimeCreated = '2026-09-30T16:40:00Z'; EventId = 1644; Computer = 'DC01'; LogName = 'Directory Service'; Client = '10.10.20.200'; User = 'CORP\NESSUS_SVC'; Filter = '(samAccountType=805306368)' })
 Assert-IR (@((Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $lu; Quiet = $true }).Findings).Count -eq 1) '1644 recon fires without exclusion'

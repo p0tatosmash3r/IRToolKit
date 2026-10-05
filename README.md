@@ -175,7 +175,11 @@ unblock the file; the detection tools are normally run in place from `Tools\` wh
 
 Each tool ships synthetic sample data (`Tests/SampleData/<Phase>/<Tool>.json`) with both malicious and
 benign events and a test (`Tests/<Phase>/<Tool>.Test.ps1`) asserting the malicious cases fire, the
-benign look-alikes do not, and empty input is handled cleanly.
+benign look-alikes do not, and empty input is handled cleanly. `Tests/Common` covers the shared module
+with real `.evtx` fixtures (`Tests/SampleData/Common`, public-domain samples from the
+[EVTX-to-MITRE-Attack](https://github.com/mdecrevoisier/EVTX-to-MITRE-Attack) corpus). The AD suite is
+also exercised end-to-end against that corpus; gaps it exposed are fed back as detections and
+regression tests.
 
 ## Repository layout
 

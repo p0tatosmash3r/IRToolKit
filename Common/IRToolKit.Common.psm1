@@ -506,6 +506,97 @@ function Write-IRToolHeader {
 
 #region ---------------------------------------------------------------- Event collection
 
+# A module-cached child runspace used for ALL .evtx file reads (see Invoke-IRFileRead). Created once per
+# module instance and reused, so Get-WinEvent is auto-loaded only once; closed when the module is removed.
+$script:IRFileReadRunspace = $null
+
+function Invoke-IRFileRead {
+    <#
+    .SYNOPSIS
+        Reads one .evtx file (one event-ID chunk) in an isolated child runspace and returns the live
+        EventLogRecord objects plus how many malformed records were skipped.
+    .DESCRIPTION
+        An .evtx that contains a malformed record (truncated/corrupt export, forensic image) makes the
+        XPath-filtered Get-WinEvent throw a TERMINATING EventLogException ("The specified XML text was not
+        well-formed"). That cannot be contained in-runspace: a local -ErrorVariable only catches
+        non-terminating errors, and even a caught terminating error is still recorded to the caller's
+        -ErrorVariable (PS 5.1), AND the whole read aborts so every good event in the file is lost.
+        Running the read in a child runspace keeps the throw there. On a failure that is not simply
+        "no matching events", the child falls back to an UNFILTERED read (no XPath, which does not trip on
+        the bad record) and applies the Id / provider / time filters itself, then pre-validates ToXml() per
+        record so the parent's later flatten cannot throw either. Records are live objects (in-process
+        runspace), so callers use them exactly as before.
+    #>
+    # StartTime/EndTime are deliberately untyped: the caller passes $null when no bound was given, and a
+    # [datetime] parameter cannot bind $null (a terminating binding error).
+    param([string]$Target, [int[]]$Chunk, [string]$ProviderName, [bool]$HasStart, $StartTime, [bool]$HasEnd, $EndTime, [long]$MaxEvents, [switch]$ForceUnfiltered)
+    if (-not $script:IRFileReadRunspace -or $script:IRFileReadRunspace.RunspaceStateInfo.State -ne 'Opened') {
+        $script:IRFileReadRunspace = [runspacefactory]::CreateRunspace()
+        $script:IRFileReadRunspace.Open()
+        # Inside the module the runspace lives until Remove-Module. In a Build-Standalone tool (module inlined,
+        # no PSModuleInfo) nobody would ever dispose it, so Get-IRWinEvent disposes it at the end of each call.
+        $m = $MyInvocation.MyCommand.Module
+        $script:IRFileReadOwnedByModule = [bool]$m
+        if ($m) { $m.OnRemove = { if ($script:IRFileReadRunspace) { try { $script:IRFileReadRunspace.Dispose() } catch { } } } }
+    }
+    # The child script is kept as a scriptblock LITERAL (its text is re-parsed in the child runspace via
+    # ToString()); a here-string is deliberately avoided because Build-Standalone embeds this module in one.
+    $child = {
+        param($f, $ids, $prov, $hasStart, $start, $hasEnd, $end, $max, $force)
+        $out = New-Object System.Collections.Generic.List[object]; $skipped = 0; $fallback = $false; $err = ''; $ferr = ''; $badSig = $false
+        $recs = @()
+        # A file that is not an .evtx at all (wrong / truncated header) makes the FILTERED read report "no
+        # matching events" rather than fail, which would silently hide an unreadable file. Check the 8-byte
+        # 'ElfFile\0' signature first and report that as an error instead.
+        $sig = ''
+        try {
+            $fs = [IO.File]::OpenRead($f)
+            try { $buf = New-Object byte[] 8; $n = $fs.Read($buf, 0, 8); $sig = [Text.Encoding]::ASCII.GetString($buf, 0, $n) } finally { $fs.Dispose() }
+        }
+        catch { $err = [string]$_.Exception.Message }
+        if (-not $err -and $sig -ne ("ElfFile" + [char]0)) { $err = 'not an .evtx file (ElfFile signature missing)'; $badSig = $true }
+        $needFallback = [bool]$force
+        if (-not $err -and -not $needFallback) {
+            try {
+                $fh = @{ Path = $f }
+                if ($ids) { $fh['Id'] = $ids }
+                if ($prov) { $fh['ProviderName'] = $prov }
+                if ($hasStart) { $fh['StartTime'] = $start }
+                if ($hasEnd) { $fh['EndTime'] = $end }
+                $g = @{ FilterHashtable = $fh; ErrorAction = 'Stop' }
+                if ($max -gt 0) { $g['MaxEvents'] = $max }
+                $recs = @(Get-WinEvent @g)
+            }
+            catch {
+                if ([string]$_.FullyQualifiedErrorId -like 'NoMatchingEventsFound*') { $recs = @() }
+                else { $needFallback = $true; $ferr = [string]$_.Exception.Message }
+            }
+        }
+        if (-not $err -and $needFallback) {
+            $fallback = $true
+            try {
+                $recs = @(Get-WinEvent -Path $f -ErrorAction Stop | Where-Object {
+                        ((-not $ids) -or ($_.Id -in $ids)) -and ((-not $prov) -or ($_.ProviderName -like $prov)) -and
+                        ((-not $hasStart) -or ($_.TimeCreated -ge $start)) -and ((-not $hasEnd) -or ($_.TimeCreated -le $end)) })
+                if ($max -gt 0 -and $recs.Count -gt $max) { $recs = @($recs[0..($max - 1)]) }
+            }
+            catch { $recs = @(); $err = [string]$_.Exception.Message }
+        }
+        foreach ($r in $recs) { try { $null = $r.ToXml() } catch { $skipped++; continue }; $out.Add($r) }
+        , [pscustomobject]@{ Records = $out.ToArray(); Skipped = $skipped; Fallback = $fallback; FilterErr = $ferr; Err = $err; BadSignature = $badSig }
+    }
+    $ps = [powershell]::Create()
+    $ps.Runspace = $script:IRFileReadRunspace
+    try {
+        $null = $ps.AddScript($child.ToString()).AddArgument($Target).AddArgument($Chunk).AddArgument($ProviderName).AddArgument($HasStart).AddArgument($StartTime).AddArgument($HasEnd).AddArgument($EndTime).AddArgument($MaxEvents).AddArgument([bool]$ForceUnfiltered)
+        $res = $ps.Invoke()
+        if ($res -and $res.Count -gt 0 -and $res[0]) { return $res[0] }
+    }
+    catch { }
+    finally { $ps.Dispose() }
+    [pscustomobject]@{ Records = @(); Skipped = 0; Fallback = $false; FilterErr = ''; Err = ''; BadSignature = $false }
+}
+
 function Get-IRWinEvent {
     <#
     .SYNOPSIS
@@ -565,8 +656,11 @@ function Get-IRWinEvent {
     $targets = @()
     if ($PSCmdlet.ParameterSetName -eq 'File') { $targets = $files } else { $targets = @($LogName) }
 
+    try {
     foreach ($target in $targets) {
+        $chunkIdx = -1
         foreach ($chunk in $idChunks) {
+            $chunkIdx++
             $fh = @{}
             if ($PSCmdlet.ParameterSetName -eq 'File') { $fh['Path'] = $target } else { $fh['LogName'] = $target }
             if ($chunk) { $fh['Id'] = $chunk }
@@ -588,6 +682,29 @@ function Get-IRWinEvent {
             $desc = $target
             if ($chunk) { $desc += ' ids=' + ($chunk -join ',') }
             Write-Verbose "Get-WinEvent $desc"
+            if ($PSCmdlet.ParameterSetName -eq 'File') {
+                # File reads go through the isolated child runspace (see Invoke-IRFileRead): a malformed
+                # record would otherwise throw a terminating error that leaks to the caller and aborts the file.
+                $res = Invoke-IRFileRead -Target $target -Chunk $chunk -ProviderName $ProviderName -HasStart $hasStart -StartTime $StartTime -HasEnd $hasEnd -EndTime $EndTime -MaxEvents $MaxEvents
+                if ($res.Err) {
+                    Write-Warning ("Error reading {0}: {1}" -f $desc, $res.Err)
+                    if ($res.BadSignature) { break }     # not an evtx: no point trying the other ID chunks
+                    continue
+                }
+                if ($res.Fallback -or $res.Skipped -gt 0) { Write-IRStatus ("Filtered read of {0} failed ({1}) - recovered {2} matching event(s) via an unfiltered read; {3} unreadable record(s) skipped." -f $desc, $res.FilterErr, @($res.Records).Count, $res.Skipped) -Level Detail }
+                foreach ($rec in @($res.Records)) { $rec }
+                if ($res.Fallback -and ($chunkIdx + 1) -lt $idChunks.Count) {
+                    # The file needs the unfiltered path: read the REMAINING ID chunks in one more unfiltered pass
+                    # instead of failing the filtered read and re-reading the whole file once per chunk.
+                    $rest = @(); for ($ci = $chunkIdx + 1; $ci -lt $idChunks.Count; $ci++) { $rest += @($idChunks[$ci]) }
+                    $res2 = Invoke-IRFileRead -Target $target -Chunk $rest -ProviderName $ProviderName -HasStart $hasStart -StartTime $StartTime -HasEnd $hasEnd -EndTime $EndTime -MaxEvents $MaxEvents -ForceUnfiltered
+                    if ($res2.Err) { Write-Warning ("Error reading {0}: {1}" -f $target, $res2.Err) }
+                    else { Write-IRStatus ("Unfiltered read of {0} for the remaining ID(s) {1}: {2} event(s); {3} unreadable record(s) skipped." -f $target, ($rest -join ','), @($res2.Records).Count, $res2.Skipped) -Level Detail }
+                    foreach ($rec in @($res2.Records)) { $rec }
+                    break
+                }
+                continue
+            }
             $gweErr = $null
             Get-WinEvent @gwe -ErrorVariable gweErr 2>$null
             foreach ($er in @($gweErr)) {
@@ -608,6 +725,15 @@ function Get-IRWinEvent {
                 }
                 Write-Warning ("Error reading {0}: {1}" -f $desc, $msg)
             }
+        }
+    }
+    }
+    finally {
+        # Standalone (inlined) builds have no module to dispose the cached child runspace on unload, so release
+        # it per call there; inside the module it is kept for reuse and disposed by OnRemove.
+        if ($PSCmdlet.ParameterSetName -eq 'File' -and $script:IRFileReadRunspace -and -not $script:IRFileReadOwnedByModule) {
+            try { $script:IRFileReadRunspace.Dispose() } catch { }
+            $script:IRFileReadRunspace = $null
         }
     }
 }
