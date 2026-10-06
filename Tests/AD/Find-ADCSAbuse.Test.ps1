@@ -82,6 +82,11 @@ Assert-IR ($b.Errors.Count -eq 0) 'benign-only subset has no stray errors'
 $e = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = @(); Quiet = $true }
 Assert-IR ($e.Findings.Count -eq 0 -and $e.Errors.Count -eq 0) 'empty input is clean and error-free'
 
+# Regression (NoADLookup + DomainController no longer live-discovers): the run must be equivalent to
+# the baseline and error-free (the supplied DC names alone drive DC recognition).
+$rNo = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputPath = $sample; Quiet = $true; PrivilegedUpn = @('administrator@corp.local'); NoADLookup = $true; DomainController = @('DC01') }
+Assert-IR ($rNo.Findings.Count -eq $f.Count -and $rNo.Errors.Count -eq 0) '-NoADLookup with -DomainController matches the baseline and has no stray errors'
+
 # Regression (corpus, Rule 6): a 4882 that only grants Enroll / Read to Authenticated Users is silent; one that
 # leaves CA Administrator with a named admin group (no broad principal) is a Low review item.
 $acl = @(

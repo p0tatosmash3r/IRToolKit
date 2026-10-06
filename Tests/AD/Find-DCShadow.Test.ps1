@@ -33,6 +33,12 @@ Assert-IR ($push[0].Severity -eq 'High') 'replication push rights finding is Hig
 # RULE 5 - DCShadow tooling in a script block.
 Assert-IR (@($f | Where-Object { $_.EventIds -contains 4104 }).Count -ge 1) 'DCShadow tooling script block detected'
 
+# Regression (NoADLookup wired): with -NoADLookup the DC list comes solely from -DomainController, so
+# the run must be equivalent to the baseline (same findings, DC02 still excluded) and error-free.
+$rNo = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputPath = $sample; Quiet = $true; DomainController = @('DC01', 'DC02'); NoADLookup = $true }
+Assert-IR ($rNo.Findings.Count -eq $f.Count -and $rNo.Errors.Count -eq 0) '-NoADLookup run matches the baseline and has no stray errors'
+Assert-IR (@($rNo.Findings | Where-Object { $_.Target -like 'DC02*' -or $_.Account -like 'DC02*' }).Count -eq 0) '-NoADLookup still excludes the supplied DC (DC02)'
+
 # Benign activity must never fire.
 Assert-IR (@($f | Where-Object { $_.Target -like 'DC02*' -or $_.Account -like 'DC02*' }).Count -eq 0) 'legitimate DC (DC02$) replication SPNs/rights not flagged'
 Assert-IR (@($f | Where-Object { $_.Target -like 'WS-50*' }).Count -eq 0) 'ordinary computer SPNs (WS-50$) not flagged'

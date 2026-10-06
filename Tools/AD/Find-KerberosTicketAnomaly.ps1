@@ -20,8 +20,8 @@
     deliberately honest and false positives are documented per rule.
 
     Detection logic:
-      * Sources: Security 4768 (AS-REQ / TGT) and 4769 (TGS). 4770/4624/4672 may enrich but are not
-        required. PowerShell 4104 is used for tooling signatures.
+      * Sources: Security 4768 (AS-REQ / TGT) and 4769 (TGS); PowerShell 4104 for the tooling
+        signatures. No other event IDs are read.
       * RULE 1 (High / Medium) - per-principal RC4 encryption downgrade: a 4768 TGT issued with RC4
         (0x17/0x18) for a principal that is otherwise AES-capable. AES-capability is shown either by an
         AES (0x11-0x14) TGT for the same principal, OR by an AES service ticket (4769) that principal
@@ -38,7 +38,7 @@
         realm; all other TGT-less principals are summarised in ONE Informational finding (so a partial
         export cannot flood the report). Only evaluated when the dataset contains some 4768 traffic.
         Machine accounts and cross-realm referral requests (ServiceName 'krbtgt/...') are excluded.
-      * RULE 3 (Informational, supporting) - anomalous TGT options / lifetime: a 4768 RC4 TGT that is both
+      * RULE 3 (Informational supporting; High on an absurd lifetime) - anomalous TGT options / lifetime: a 4768 RC4 TGT that is both
         forwardable and renewable is weak supporting evidence; an explicit lifetime beyond
         -MaxTicketLifetimeYears (when the schema carries one) is escalated. On its own this is not a
         standalone high finding.
@@ -121,11 +121,11 @@
     Analyse an exported log and write CSV, JSON and HTML reports.
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4768,4769} | ConvertFrom-IRWinEvent | .\Find-KerberosTicketAnomaly.ps1
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4768,4769} -ErrorAction Ignore | ConvertFrom-IRWinEvent | .\Find-KerberosTicketAnomaly.ps1
 
 .NOTES
     ATT&CK : T1558.001 (Golden Ticket), T1558.002 (Silver Ticket), T1550.003 (Pass the Ticket)
-    Events : 4768, 4769 (Security); 4770, 4624, 4672 (optional context); 4104 (PowerShell Operational)
+    Events : 4768, 4769 (Security); 4104 (PowerShell Operational)
     Part of IRToolKit.
 #>
 [CmdletBinding(DefaultParameterSetName = 'Live')]

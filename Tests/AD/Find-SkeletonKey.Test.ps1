@@ -145,4 +145,9 @@ Assert-IR (@($def.Findings | Where-Object { $_.Target -eq 'DefenderTraversal' })
 $e = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = @(); Quiet = $true }
 Assert-IR ($e.Findings.Count -eq 0 -and $e.Errors.Count -eq 0) 'empty input is clean and error-free'
 
+# Regression (NoADLookup wired): the DC list comes solely from -DomainController, so the run is
+# equivalent to the baseline and error-free.
+$rNo = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputPath = $sample; Quiet = $true; DomainController = $dcs; NoADLookup = $true }
+Assert-IR ($rNo.Findings.Count -eq $f.Count -and $rNo.Errors.Count -eq 0) '-NoADLookup run matches the baseline and has no stray errors'
+
 Complete-IRTest

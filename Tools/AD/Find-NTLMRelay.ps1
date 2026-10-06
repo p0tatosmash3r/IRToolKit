@@ -23,7 +23,8 @@
       * RULE 4 - NTLMv1 network logons (LmPackageName "NTLM V1" / "LM"), a downgrade that is trivially
         relayable and crackable; High when the downgraded principal is a machine / DC account.
       * RULE 5 - relay / coercion tooling in PowerShell script blocks (4104): Inveigh, ntlmrelayx,
-        Responder, PetitPotam, PrinterBug, Coercer, MultiRelay, SpoolSample.
+        Responder, PetitPotam and related coercion / relay tool names (full signature set in the RULE 5
+        list in the body).
 
     Required audit policy / log sources:
       * Audit Logon (Success, Failure) -> 4624 / 4625 on the relayed-to hosts (DCs, servers, CA).
@@ -65,7 +66,7 @@
 .PARAMETER Quiet
     Suppress console status output.
 .PARAMETER NoADLookup
-    Skip live Active Directory look-ups.
+    Skip live Active Directory DC discovery; only -DomainController entries are used to recognise DCs.
 .PARAMETER DomainController
     Domain controller names / IPs. Used to recognise a relayed DC machine account (RULE 1 -> Critical) and,
     offline, to supply the DC list when the host is not domain joined.
@@ -84,7 +85,8 @@
     computer account that legitimately uses NTLM) and should be suppressed from RULE 1. Matched on the bare
     machine name (with or without a trailing '$', UPN, or DOMAIN\ prefix).
 .PARAMETER PrivilegedAccount
-    Account names (users or machines) whose relayed NTLM logon should be escalated to Critical.
+    Account names (users or machines) whose relayed NTLM logon should be escalated to Critical. An
+    NTLMv1 downgrade (RULE 4) involving such an account is raised to High as well.
 
 .EXAMPLE
     .\Find-NTLMRelay.ps1 -Path C:\Evidence\DC01-Security.evtx, C:\Evidence\DC02-Security.evtx -DomainController DC01,DC02
@@ -164,7 +166,7 @@ end {
     Write-IRStatus "Source: $($ctx.Description)"
     $findings = New-Object System.Collections.Generic.List[object]
 
-    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController
+    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController -NoDiscovery:$NoADLookup
     if ($dcLookup.Count -eq 0) { Write-IRStatus 'No domain controllers known (not domain joined and no -DomainController supplied) - DC relay escalation (RULE 1 Critical) is limited.' -Level Detail }
 
     $ev4624 = @(Get-IRSourceEvents -Context $ctx -LogName 'Security' -EventId 4624)

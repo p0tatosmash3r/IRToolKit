@@ -70,7 +70,7 @@
 .PARAMETER Quiet
     Suppress console status output.
 .PARAMETER NoADLookup
-    Skip live Active Directory look-ups.
+    Skip live Active Directory DC discovery; only -DomainController entries are used to recognise DCs.
 .PARAMETER DomainController
     Domain controller names / IPs. Readers that are DCs are excluded from RULE 1 / RULE 2 (DCs read KDS
     material and compute gMSA passwords normally); offline, this also supplies the DC list.
@@ -144,7 +144,7 @@ end {
     $findings = New-Object System.Collections.Generic.List[object]
 
     $managedPwGuid = 'e362ed86-b728-0842-b27d-2dea7a9df218'   # msDS-ManagedPassword (gMSA password blob)
-    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController
+    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController -NoDiscovery:$NoADLookup
     if ($dcLookup.Count -eq 0) { Write-IRStatus 'No domain controllers known (not domain joined and no -DomainController supplied) - DC readers cannot be excluded; findings carry a caveat.' -Level Detail }
 
     function Get-GGBareName {

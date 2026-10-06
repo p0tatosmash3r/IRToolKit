@@ -140,7 +140,7 @@
     Analyse exported CA and DC logs offline and write all report formats.
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4887} | ConvertFrom-IRWinEvent -IncludeMessage | .\Find-ADCSAbuse.ps1
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4887} -ErrorAction Ignore | ConvertFrom-IRWinEvent -IncludeMessage | .\Find-ADCSAbuse.ps1
 
 .NOTES
     ATT&CK : T1649 (Steal or Forge Authentication Certificates)
@@ -211,7 +211,7 @@ end {
     # avoid the call entirely otherwise (the lookup is only used to annotate DC-sourced activity).
     $dcLookup = @{}
     if (($DomainController -and @($DomainController).Count -gt 0) -or ((-not $NoADLookup) -and (Test-IRAdAvailable))) {
-        try { $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController } catch { $dcLookup = @{} }
+        try { $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController -NoDiscovery:$NoADLookup } catch { $dcLookup = @{} }
     }
     if ($null -eq $dcLookup) { $dcLookup = @{} }
     if ($dcLookup.Count -eq 0) { Write-IRStatus 'No domain controllers known (not domain joined and no -DomainController supplied) - DC-sourced annotation is disabled.' -Level Detail }

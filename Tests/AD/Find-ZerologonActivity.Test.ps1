@@ -68,4 +68,10 @@ $n = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $nas; Quiet
 Assert-IR (@($n.Findings | Where-Object { $_.EventIds -contains 5829 }).Count -eq 1) '30 identical 5829 events collapse to one finding'
 Assert-IR ($n.Errors.Count -eq 0) 'grouped-5829 run has no stray errors'
 
+# Regression (NoADLookup wired): the DC list comes solely from -DomainController, so the run is
+# equivalent to the baseline (DC escalation intact) and error-free.
+$rNo = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputPath = $sample; Quiet = $true; DomainController = @('DC01', 'DC02'); NoADLookup = $true }
+Assert-IR ($rNo.Findings.Count -eq $f.Count -and $rNo.Errors.Count -eq 0) '-NoADLookup run matches the baseline and has no stray errors'
+Assert-IR (@($rNo.Findings | Where-Object Severity -eq 'Critical').Count -eq @($f | Where-Object Severity -eq 'Critical').Count) '-NoADLookup keeps the DC-based Critical escalations'
+
 Complete-IRTest

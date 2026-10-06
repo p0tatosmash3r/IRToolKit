@@ -88,10 +88,10 @@
     Analyse an exported log offline, treating DC01/DC02 as domain controllers, and write all report formats.
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=5136} | ConvertFrom-IRWinEvent | .\Find-ShadowCredentials.ps1
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=5136} -ErrorAction Ignore | ConvertFrom-IRWinEvent | .\Find-ShadowCredentials.ps1
 
 .NOTES
-    ATT&CK : T1556 (Modify Authentication Process), T1098.001 (Account Manipulation: Additional Cloud/AD Credentials - Key Credential / Shadow Credentials)
+    ATT&CK : T1098.001 (Account Manipulation: Additional Cloud/AD Credentials - Key Credential / Shadow Credentials); findings carry T1098.001. Related parent behaviour: T1556 (Modify Authentication Process)
     Events : 5136 (Security - directory object modified), 4768 (Security - Kerberos TGT request / PKINIT), 4104 (PowerShell Operational)
     Part of IRToolKit.
 #>

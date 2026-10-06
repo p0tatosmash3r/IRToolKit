@@ -41,6 +41,19 @@ try {
 }
 finally { Remove-Item -LiteralPath $garbage -Force -ErrorAction SilentlyContinue }
 
+# LIVE reads go through the same isolation. On a host that lacks a log or an event provider, Get-WinEvent
+# throws a TERMINATING EventLogException (and a trailing "The parameter is incorrect") that -ErrorAction
+# SilentlyContinue cannot suppress; these must surface as a warning only, never as an error record.
+$before = $global:Error.Count
+$lv1 = @(Get-IRWinEvent -LogName 'IRToolKit-NoSuchLog-ForTests' -EventId 1644 -StartTime (Get-Date).AddDays(-7) -ErrorVariable le1 -WarningVariable lw1 3>$null 2>&1 | Where-Object { $_ -is [System.Diagnostics.Eventing.Reader.EventRecord] })
+Assert-IR ($lv1.Count -eq 0 -and @($le1).Count -eq 0 -and $global:Error.Count -eq $before -and (@($lw1) -join ' ') -match 'not found') 'live read of a missing log: warning only, no error record, nothing in $Error'
+$lv2 = @(Get-IRWinEvent -LogName 'System' -EventId 39, 40, 41 -ProviderName 'IRToolKit-NoSuchProvider-ForTests' -StartTime (Get-Date).AddDays(-7) -ErrorVariable le2 -WarningVariable lw2 3>$null 2>&1 | Where-Object { $_ -is [System.Diagnostics.Eventing.Reader.EventRecord] })
+Assert-IR ($lv2.Count -eq 0 -and @($le2).Count -eq 0 -and $global:Error.Count -eq $before -and (@($lw2) -join ' ') -match 'provider') 'live read with a missing event provider: warning only, no error record'
+$lv3 = @(Get-IRWinEvent -LogName 'Application' -EventId 65000 -StartTime (Get-Date).AddDays(-7) -ErrorVariable le3 -WarningVariable lw3 3>$null 2>&1 | Where-Object { $_ -is [System.Diagnostics.Eventing.Reader.EventRecord] })
+Assert-IR ($lv3.Count -eq 0 -and @($le3).Count -eq 0 -and $global:Error.Count -eq $before -and @($lw3).Count -eq 0) 'live read with no matching events is silent (no warning, no error)'
+$lv4 = @(Get-IRWinEvent -LogName 'Application' -StartTime (Get-Date).AddDays(-30) -MaxEvents 5 -ErrorVariable le4 2>&1 | Where-Object { $_ -is [System.Diagnostics.Eventing.Reader.EventRecord] })
+Assert-IR ($lv4.Count -ge 1 -and @($le4).Count -eq 0 -and $global:Error.Count -eq $before -and [bool]$lv4[0].ToXml()) 'live read of a real channel returns usable records through the isolated runspace'
+
 # A tool reading the file end-to-end must be error-free and emit only findings.
 $tool = Join-Path $PSScriptRoot '..\..\Tools\AD\Find-DCShadow.ps1'
 $r = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ Path = $sample; Quiet = $true; DomainController = @('DC01') }

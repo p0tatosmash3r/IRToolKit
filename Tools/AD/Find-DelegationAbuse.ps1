@@ -32,7 +32,8 @@
       * Rule 2 (unconstrained) - 4742/4738 adding TRUSTED_FOR_DELEGATION (or %%2104), or a 5136
         userAccountControl Value-Added decoding to TRUSTED_FOR_DELEGATION. High.
       * Rule 3 (constrained / protocol transition) - 4742/4738 or 5136 that set/add
-        msDS-AllowedToDelegateTo, or that add TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION (or %%2114).
+        msDS-AllowedToDelegateTo, or that add TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION (or %%2114; the
+        5136 LDAP decoder reports the same flag as TRUSTED_TO_AUTH_FOR_DELEGATION).
         High when protocol transition is enabled, otherwise Medium.
       * Rule 4 (sensitive-SPN delegation) - a constrained-delegation target list that includes an SPN
         (ldap/ host/ cifs/ http/) on a known Domain Controller raises Rule 3 to High.
@@ -90,7 +91,7 @@
     Analyse an exported Security log offline and write CSV/JSON/HTML reports.
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=5136,4742,4738} | ConvertFrom-IRWinEvent | .\Find-DelegationAbuse.ps1 -DomainController DC01
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=5136,4742,4738} -ErrorAction Ignore | ConvertFrom-IRWinEvent | .\Find-DelegationAbuse.ps1 -DomainController DC01
     Pipe pre-collected events into the tool.
 
 .NOTES

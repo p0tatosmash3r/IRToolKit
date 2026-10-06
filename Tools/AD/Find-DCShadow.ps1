@@ -24,14 +24,15 @@
         defining DCShadow setup step.
       * RULE 2 (High; Critical when paired with RULE 3) - an nTDSDSA object is created (5137) under the
         Configuration/Sites partition - a new domain controller registered in the directory.
-      * RULE 3 (High) - an nTDSDSA object is deleted (5141). On its own it is the teardown of a DC;
-        correlated with a RULE 2 creation of the same object within -CorrelationMinutes it is the
-        transient "appear then vanish" rogue DC that is DCShadow's signature (both escalate to Critical).
+      * RULE 3 (Medium/Medium) - an nTDSDSA object is deleted (5141). On its own it is the teardown of
+        a DC; correlated with a RULE 2 creation of the same object within -CorrelationMinutes it is the
+        transient "appear then vanish" rogue DC that is DCShadow's signature - the delete is then folded
+        into the RULE 2 creation finding, which escalates to Critical.
       * RULE 4 (High) - replication PUSH / topology rights used by a non-DC principal (4662 Properties
         containing DS-Replication-Synchronize, DS-Replication-Manage-Topology, or DS-Install-Replica).
         This is the push side of replication, distinct from the read rights Find-DCSync looks for.
-      * RULE 5 (High) - DCShadow tooling in a PowerShell script block (4104): lsadump::dcshadow,
-        dcshadow, DsReplicaAdd, mimikatz.
+      * RULE 5 (High) - DCShadow tooling in a PowerShell script block (4104): the dcshadow module name
+        and the DRS replication call names (full signature set in the RULE 5 list in the body).
 
     Required audit policy / log sources (on domain controllers):
       * DS Access > Audit Directory Service Changes = Success  -> 5137 / 5141 (object create/delete) and
@@ -71,10 +72,11 @@
 .PARAMETER Quiet
     Suppress console status output.
 .PARAMETER NoADLookup
-    Skip live Active Directory look-ups.
+    Skip live Active Directory DC discovery; only -DomainController entries are used to recognise DCs.
 .PARAMETER DomainController
-    Existing domain controller names / IPs. A target that is a known DC is treated as legitimate for the
-    SPN / nTDSDSA rules; offline, this also supplies the DC list.
+    Existing domain controller names / IPs. Consulted by RULE 1 (an SPN target that is a known DC is
+    legitimate) and RULE 4 (a known-DC 4662 subject is excluded); RULE 2/3 do not use it. Offline, this
+    supplies the whole DC list.
 .PARAMETER CorrelationMinutes
     Window (minutes) in which an nTDSDSA create (5137) followed by a delete (5141) of the same object is
     treated as a transient rogue DC and escalated to Critical (default 60).
@@ -88,7 +90,7 @@
 
 .NOTES
     ATT&CK : T1207 (Rogue Domain Controller)
-    Events : 4742, 5137, 5141, 4662 (Security), 4104 (PowerShell Operational)
+    Events : 4742, 5136, 5137, 5141, 4662 (Security), 4104 (PowerShell Operational)
     Part of IRToolKit.
 #>
 [CmdletBinding(DefaultParameterSetName = 'Live')]
@@ -146,8 +148,8 @@ end {
         '9923a32a-3607-11d2-b9be-0000f87a36b2' = 'DS-Install-Replica'
     }
 
-    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController
-    if ($dcLookup.Count -eq 0) { Write-IRStatus 'No domain controllers known (not domain joined and no -DomainController supplied) - cannot exclude legitimate DCs; findings get a lowered confidence and a caveat.' -Level Detail }
+    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController -NoDiscovery:$NoADLookup
+    if ($dcLookup.Count -eq 0) { Write-IRStatus 'No domain controllers known (not domain joined and no -DomainController supplied) - cannot exclude legitimate DCs; RULE 4 confidence drops to Medium and findings carry a caveat.' -Level Detail }
 
     function Get-DnLeaf {
         param([string]$Dn)

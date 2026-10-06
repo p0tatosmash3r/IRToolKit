@@ -90,8 +90,9 @@
     .\Find-ADReconnaissance.ps1 -StartTime (Get-Date).AddDays(-2) -ExcludeAccount NESSUS_SVC,CMDB01$ -OutputPath C:\Evidence\Out -Format All
 
 .NOTES
-    ATT&CK : T1087.002 (Domain Account Discovery), T1069.002 (Domain Groups), T1482 (Domain Trust
-             Discovery), T1018 (Remote System Discovery)
+    ATT&CK : T1087.002 (Domain Account Discovery) and T1069.002 (Domain Groups) are the techniques
+             tagged on findings. Related, untagged: T1482 (Domain Trust Discovery), T1018 (Remote
+             System Discovery)
     Events : 1644 (Directory Service); 4798, 4799, 4688 (Security); 4104 (PowerShell Operational)
     Part of IRToolKit.
 #>

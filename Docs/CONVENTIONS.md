@@ -89,13 +89,14 @@ Important PowerShell gotchas (all learned the hard way in this kit):
   `foreach`) instead of `@($groups[$key])`.
 - Suppressing expected errors from a live cmdlet so they do NOT reach a caller's `-ErrorVariable`: neither
   `-ErrorAction SilentlyContinue` nor `-ErrorAction Stop`/try-catch is enough (both still record the error). Use
-  `SomeCmdlet ... -ErrorVariable local 2>$null` and inspect `$local` yourself (this is how `Get-IRWinEvent` does it for
-  live channels), or `-ErrorAction Ignore` when you do not need the error object. That is still not enough for a
-  TERMINATING error: an `.evtx` with a malformed record makes the event-ID-filtered `Get-WinEvent` throw an
-  `EventLogException` that no in-runspace handling keeps out of the caller's `-ErrorVariable` (and the whole file's
-  events are lost). `Get-IRWinEvent` therefore performs every file read inside an isolated child runspace
-  (`Invoke-IRFileRead`), which catches the throw there and falls back to an unfiltered read with in-PowerShell
-  filtering so no good event is dropped. Reuse it rather than calling `Get-WinEvent -Path` yourself.
+  `SomeCmdlet ... -ErrorVariable local 2>$null` and inspect `$local` yourself, or `-ErrorAction Ignore` when you do
+  not need the error object. That is still not enough for a TERMINATING error, and `Get-WinEvent` throws those
+  routinely: an `.evtx` with a malformed record (event-ID-filtered read), a log or event provider that does not
+  exist on this host, access denied, RPC failure - all `EventLogException` throws that no in-runspace handling
+  keeps out of the caller's `-ErrorVariable`. `Get-IRWinEvent` therefore performs EVERY read, file or live, inside
+  an isolated child runspace (`Invoke-IRFileRead` / `Invoke-IRLiveRead`) that catches the throw there and reports it
+  as a warning; file reads also fall back to an unfiltered read with in-PowerShell filtering so no good event is
+  dropped. Reuse it rather than calling `Get-WinEvent` yourself.
   A caught .NET *method* exception (e.g. `GetCurrentDomain()`
   on a non-domain host) also leaks to `-ErrorVariable`; gate such calls behind a cheap non-throwing probe
   (`Test-IRAdAvailable`) instead of relying on try-catch. `Get-IRDomainControllers` already does this.

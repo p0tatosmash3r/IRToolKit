@@ -77,4 +77,10 @@ $pr = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $ps; Quiet
 Assert-IR (@($pr.Findings | Where-Object { $_.Description -like '*Get-ADServiceAccount*' -or $_.Description -like '*Get-KdsRootKey*' }).Count -eq 0) 'routine RSAT gMSA admin (Get-ADServiceAccount / Get-KdsRootKey) not flagged'
 Assert-IR (@($pr.Findings | Where-Object { $_.EventIds -contains 4104 }).Count -eq 1) 'only the named GoldenGMSA tooling fires RULE 4'
 
+# Regression (NoADLookup wired): the DC list comes solely from -DomainController, so the run is
+# equivalent to the baseline (DC readers still excluded) and error-free.
+$rNo = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputPath = $sample; Quiet = $true; DomainController = @('DC01', 'DC02'); NoADLookup = $true }
+Assert-IR ($rNo.Findings.Count -eq $f.Count -and $rNo.Errors.Count -eq 0) '-NoADLookup run matches the baseline and has no stray errors'
+Assert-IR (@($rNo.Findings | Where-Object { $_.Account -like 'DC01*' -or $_.Account -like 'DC02*' }).Count -eq 0) '-NoADLookup still excludes the supplied DCs'
+
 Complete-IRTest

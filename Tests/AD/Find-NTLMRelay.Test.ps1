@@ -80,4 +80,10 @@ $mach = @([pscustomobject]@{ TimeCreated = '2026-09-30T15:00:00Z'; EventId = 462
 Assert-IR (@((Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $mach; Quiet = $true }).Findings).Count -eq 1) 'benign machine NTLM fires by default'
 Assert-IR (@((Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputObject = $mach; Quiet = $true; ExcludeMachineAccount = @('BACKUP01') }).Findings).Count -eq 0) 'machine NTLM suppressed by -ExcludeMachineAccount'
 
+# Regression (NoADLookup wired): the DC list comes solely from -DomainController, so the run is
+# equivalent to the baseline (DC relay escalation intact) and error-free.
+$rNo = Invoke-IRToolSafely -ToolPath $tool -Arguments @{ InputPath = $sample; Quiet = $true; DomainController = @('DC01', 'DC02'); NoADLookup = $true }
+Assert-IR ($rNo.Findings.Count -eq $f.Count -and $rNo.Errors.Count -eq 0) '-NoADLookup run matches the baseline and has no stray errors'
+Assert-IR (@($rNo.Findings | Where-Object Severity -eq 'Critical').Count -eq @($f | Where-Object Severity -eq 'Critical').Count) '-NoADLookup keeps the DC-relay Critical escalation'
+
 Complete-IRTest

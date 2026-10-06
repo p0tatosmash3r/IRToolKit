@@ -21,8 +21,12 @@
       * RULE 3 (Medium) - a SID History addition ATTEMPT failed (Security 4766).
       * RULE 4 (Critical/High) - a user/computer account change (4738/4742) whose SidHistory field now
         carries a SID value (fallback where 4765/5136 are not audited).
-      * RULE 5 (High) - SID-history injection tooling in a PowerShell script block (4104): mimikatz
-        sid::add / sid::patch, DSInternals Add-ADDBSidHistory, Invoke-Mimikatz.
+      * RULE 5 (High) - SID-history injection tooling in a PowerShell script block (4104): the
+        sid-manipulation module names and the DSInternals DB-edit cmdlets (full signature set in the
+        RULE 5 list in the body).
+
+      Non-privileged additions from RULES 1/2/4 are rolled up into ONE finding per actor and source
+      domain (listing the affected accounts) rather than one finding per event.
 
     A privileged SID is one whose RID is a privileged group RID (512/518/519/520/...), the domain
     Administrator (RID 500), or a built-in privileged SID (S-1-5-32-544, ...).

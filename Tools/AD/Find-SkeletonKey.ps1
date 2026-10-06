@@ -25,7 +25,8 @@
         the burst carries such confirmed downgrades; otherwise Medium (broad RC4 is often legacy), with
         correlation able to raise it. A single confirmed AES-capable downgrade outside a burst is Medium.
       * RULE 2 - sensitive-privilege use consistent with an LSASS patch (Security 4673): SeDebug/SeTcb.
-        This is primarily a CORRELATION FEEDER. Standalone severity is High only when the calling image
+        This is primarily a CORRELATION FEEDER (only its High / Medium findings feed the correlation;
+        Low findings are context only). Standalone severity is High only when the calling image
         path is anomalous (temp / user profile / admin share / script host), Medium when a SYSTEM/machine
         principal wields SeDebugPrivilege (which it has no routine need for - the operator-as-SYSTEM case),
         and Low otherwise (named debuggers / EDR / backup are the benign baseline). The benign boot-time
@@ -44,7 +45,8 @@
 
     The tooling signatures are deliberately kept OUT of this script and in the sidecar data file, because a
     detector that embeds verbatim Mimikatz command strings is quarantined by AMSI / EDR on load. If the
-    sidecar file is absent the tool still runs RULES 1-3 and simply skips RULE 4. The signatures live in
+    sidecar file is absent the tool still runs RULES 1-3 (RULE 3 then loses only its known-bad-driver
+    escalation - the path / driver heuristics still apply) and skips RULE 4. The signatures live in
     Common\Signatures\ (resolved beside the tool first, for standalone/local drop-ins); Build-Standalone
     copies the sidecar beside each single-file build so RULE 4 keeps working there.
 
@@ -86,7 +88,7 @@
 .PARAMETER Quiet
     Suppress console status output.
 .PARAMETER NoADLookup
-    Skip live Active Directory look-ups.
+    Skip live Active Directory DC discovery; only -DomainController entries are used to recognise DCs.
 .PARAMETER DomainController
     Domain controller names / IPs. Used to recognise DCs for RULE 3 scoping (offline supplies the list).
 .PARAMETER DowngradeThreshold
@@ -182,7 +184,7 @@ end {
     Write-IRStatus "Source: $($ctx.Description)"
     $findings = New-Object System.Collections.Generic.List[object]
 
-    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController
+    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController -NoDiscovery:$NoADLookup
 
     function Test-SKExcluded {
         param([string]$Actor)

@@ -16,15 +16,16 @@
         by the machine itself over an authenticated channel, never anonymously; an anonymous machine
         password change is the Zerologon reset signature. Critical when the target is a domain controller,
         High otherwise.
-      * RULE 2 (High/Medium) - the August-2020+ Netlogon hardening events in the System log (source
+      * RULE 2 (High/Medium; Critical when the account is a known DC) - the August-2020+ Netlogon
+        hardening events in the System log (source
         NETLOGON): 5827/5828 (a vulnerable Netlogon connection from a machine/trust account was DENIED),
         5829 (a vulnerable connection was ALLOWED - enforcement not on), 5830/5831 (allowed by the
         group-policy exception list). 5829 in particular means a non-secure Netlogon channel was permitted.
-      * RULE 3 (Medium; High on a burst) - a burst of Netlogon session-setup authentication FAILURES
+      * RULE 3 (High/Medium, burst-only) - a burst of Netlogon session-setup authentication FAILURES
         (System 5805) for a machine account from around the same time, consistent with the repeated
         attempts the exploit makes before it succeeds.
-      * RULE 4 (High) - Zerologon tooling in a PowerShell script block (4104): zerologon, CVE-2020-1472,
-        NetrServerPasswordSet2, NetrServerAuthenticate3, Invoke-Zerologon.
+      * RULE 4 (High) - Zerologon tooling in a PowerShell script block (4104): the CVE name and the
+        Netlogon RPC call names (full signature set in the RULE 4 list in the body).
 
     Required log sources:
       * Security log (domain controllers): Audit Computer Account Management = Success -> 4742.
@@ -64,7 +65,7 @@
 .PARAMETER Quiet
     Suppress console status output.
 .PARAMETER NoADLookup
-    Skip live Active Directory look-ups.
+    Skip live Active Directory DC discovery; only -DomainController entries are used to recognise DCs.
 .PARAMETER DomainController
     Domain controller names / IPs. A DC machine account whose password is reset anonymously is escalated
     to Critical; offline, this also supplies the DC list.
@@ -133,7 +134,7 @@ end {
     Write-IRStatus "Source: $($ctx.Description)"
     $findings = New-Object System.Collections.Generic.List[object]
 
-    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController
+    $dcLookup = Get-IRDomainControllerLookup -Additional $DomainController -NoDiscovery:$NoADLookup
     if ($dcLookup.Count -eq 0) { Write-IRStatus 'No domain controllers known (not domain joined and no -DomainController supplied) - DC escalation uses a name heuristic only.' -Level Detail }
 
     function Get-ZLBareName {

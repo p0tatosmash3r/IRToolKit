@@ -19,8 +19,9 @@
         excluded from burst grouping (but a single roastable host is still reported).
       * Rule 1 - no-preauth success: a 4768 with PreAuthType exactly 0 AND Status 0x0 for a
         non-machine account means the KDC issued a ticket without pre-authentication, so the
-        account genuinely does not require pre-auth (roastable). RC4/DES tickets are High/High,
-        AES tickets are High/Medium (single) or Medium. When >= Threshold distinct accounts are
+        account genuinely does not require pre-auth (roastable). RC4/DES tickets are High/High;
+        AES tickets are Medium/Medium (confidence rises to High when a live AD lookup confirms
+        DONT_REQ_PREAUTH on the account). When >= Threshold distinct accounts are
         roasted from one IP within WindowMinutes it is reported as a High "roast sweep".
         PreAuthType 15/16/17 (PKINIT / smart card) and PreAuthType 2 (PA-ENC-TIMESTAMP) are never
         flagged - only PreAuthType exactly 0.
@@ -89,7 +90,7 @@
     .\Find-ASREPRoasting.ps1 -Path C:\Evidence\DC01-Security.evtx -HoneypotAccount svc_decoy -OutputPath C:\Evidence\Out -Format All
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4768} | ConvertFrom-IRWinEvent | .\Find-ASREPRoasting.ps1
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4768} -ErrorAction Ignore | ConvertFrom-IRWinEvent | .\Find-ASREPRoasting.ps1
 
 .NOTES
     ATT&CK : T1558.004 (Steal or Forge Kerberos Tickets: AS-REP Roasting)

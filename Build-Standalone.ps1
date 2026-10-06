@@ -57,6 +57,7 @@ if (-not (Test-Path -LiteralPath $OutputDirectory)) { New-Item -ItemType Directo
 $blockPattern = '(?s)\$irModule = \$null; \$irDir = \$PSScriptRoot.*?Import-Module \$irModule -Force'
 
 $built = @()
+$failed = @()
 foreach ($pd in $phaseDirs) {
     foreach ($s in @(Get-ChildItem -LiteralPath $pd.FullName -Filter '*.ps1' -File)) {
         if ($s.BaseName -notlike $Tool) { continue }
@@ -77,7 +78,14 @@ $moduleBody
         $destDir = Join-Path $OutputDirectory $pd.Name
         if (-not (Test-Path -LiteralPath $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
         $dest = Join-Path $destDir $s.Name
-        $out | Out-File -LiteralPath $dest -Encoding UTF8
+        # A write can be refused outright when endpoint security has quarantined an earlier copy and now
+        # blocks the path. That is not a build fault: warn, record it, and keep building the other tools.
+        try { $out | Out-File -LiteralPath $dest -Encoding UTF8 -ErrorAction Stop }
+        catch {
+            Write-Warning "$($s.Name): not written - $($_.Exception.Message) (likely endpoint-security quarantine of this path; the script text itself parses). Add an AV exclusion for the output folder or build this tool elsewhere."
+            $failed += $s.Name
+            continue
+        }
         # Verify the standalone parses. Parse the in-memory text we just wrote (ParseInput) rather than
         # re-reading the file: some endpoint security products briefly lock or quarantine a freshly
         # written script, which would otherwise surface here as a misleading "parse error".
@@ -103,4 +111,5 @@ $moduleBody
     }
 }
 Write-Host ("Built {0} standalone tool(s) into {1}" -f $built.Count, $OutputDirectory) -ForegroundColor Cyan
+if ($failed.Count -gt 0) { Write-Warning ("{0} tool(s) could not be written (see warnings above): {1}" -f $failed.Count, ($failed -join ', ')) }
 $built

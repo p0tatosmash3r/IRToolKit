@@ -44,7 +44,7 @@ wevtutil epl Security C:\Evidence\DC01-Security.evtx
 For a real AD incident, pull the Security log from every affected domain controller (each DC only records
 the requests it served, and DCs replicate to each other, so no single log is complete), the PowerShell
 Operational log from each for the event 4104 tooling rules, the **System** log from each DC (the Netlogon
-Zerologon events 5805/5827-5831 live there, not in Security), and — if AD CS is in scope — the CA host's
+Zerologon events 5805/5827-5831 live there, not in Security), and - if AD CS is in scope - the CA host's
 Security log (certificate issuance events 4886/4887 live on the CA, not the DCs).
 
 Export on each source host (elevated):
@@ -162,9 +162,11 @@ The standalone under `C:\Deploy\AD\Find-Kerberoasting.ps1` behaves identically w
 
 Note: the inlined standalones embed the full module, which includes offensive-tool name signatures and,
 for `Get-IRAuditReadiness`, audit-configuration command strings. Some endpoint-security products
-quarantine or lock such a single file on write (the non-inlined tools under `Tools\` run fine). If a
-standalone is reported "written but not readable back," add an AV exclusion for the output folder or
-unblock the file; the detection tools are normally run in place from `Tools\` where this does not occur.
+quarantine or lock such a single file on write (the non-inlined tools under `Tools\` run fine; in testing,
+one product flagged only the readiness standalone, as a generic hacktool-class detection). The builder
+reports an affected tool as "written but not readable back" or "not written" and keeps building the
+others. Add an AV exclusion for the output folder, unblock the file, or skip the standalone for that tool -
+`Get-IRAuditReadiness` has no offline mode, so it is normally run in place from `Tools\` anyway.
 
 ## Testing
 
@@ -186,6 +188,7 @@ regression tests.
 ```
 Common/            Shared module (IRToolKit.Common.psm1) + display format
 Docs/              CONVENTIONS, COVERAGE matrix, AUDIT-POLICY, EVENT-REFERENCE
+Docs/Tools/AD/     Per-tool reference: rules, audit policy, parameters, every use case + example
 Templates/         Find-Template.ps1 - copy to start a new tool
 Tools/AD/          Active Directory attack detections (this delivery)
 Tools/<Phase>/     Future phases (see COVERAGE.md)

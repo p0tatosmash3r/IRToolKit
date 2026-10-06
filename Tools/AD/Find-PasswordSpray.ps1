@@ -31,13 +31,15 @@
         of the sprayed accounts within -SuccessWindowMinutes of a RULE 1 burst ending, a Critical finding
         names the likely-compromised account.
       * RULE 3 (Medium/Medium) - distributed / low-and-slow: when NO single source crosses the threshold
-        but, per target domain and across ALL sources, >= -Threshold distinct accounts each fail only
-        once or twice within the longer -SlowWindowMinutes window (a spray spread across hosts to stay
-        under per-source thresholds). Lower confidence by design.
+        but, per target domain and across ALL sources, >= -Threshold DISTINCT accounts fail within the
+        longer -SlowWindowMinutes window (a spray spread across hosts to stay under per-source
+        thresholds). Distinct-account counting means per-account failure volume does not matter and a
+        noisy single account cannot trigger it alone. Lower confidence by design.
 
     Required audit policy / log sources:
       * DC and member servers: Advanced Audit Policy > Logon/Logoff > Audit Logon = Success and Failure
-        (4624 / 4625); Account Logon > Audit Kerberos Authentication Service = Failure (4771 / 4768).
+        (4624 / 4625); Account Logon > Audit Kerberos Authentication Service = Success and Failure
+        (4771 / 4768 - RULE 2's spray-then-success correlation also uses 4768 successes).
 
     Known false positives:
       * A misconfigured service or application with stale credentials can fail for several accounts from
@@ -96,7 +98,7 @@
     Analyse an exported log with a lower spray threshold and write CSV/JSON/HTML reports.
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625,4771,4768,4624} | ConvertFrom-IRWinEvent | .\Find-PasswordSpray.ps1
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625,4771,4768,4624} -ErrorAction Ignore | ConvertFrom-IRWinEvent | .\Find-PasswordSpray.ps1
     Pipe pre-collected events straight into the tool.
 
 .NOTES

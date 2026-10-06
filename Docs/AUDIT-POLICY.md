@@ -1,7 +1,7 @@
 # Audit policy and logging requirements
 
 The detections only work if the events exist. This is what to enable, and where. Run
-`Tools\Get-IRAuditReadiness.ps1` (elevated, on the host you will hunt - usually a domain controller)
+`Tools\AD\Get-IRAuditReadiness.ps1` (elevated, on the host you will hunt - usually a domain controller)
 for a per-host report of the gaps.
 
 Prefer configuring these through Group Policy (Computer Configuration > Policies > Windows Settings >
@@ -59,5 +59,5 @@ the collector offline.
 
 ```powershell
 auditpol /get /category:* | findstr /i "Kerberos Directory Group Logon"
-.\Tools\Get-IRAuditReadiness.ps1 -OutputPath C:\Evidence\Readiness -Format Html
+.\Tools\AD\Get-IRAuditReadiness.ps1 -OutputPath C:\Evidence\Readiness -Format Html
 ```

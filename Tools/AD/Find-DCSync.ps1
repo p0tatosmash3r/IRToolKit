@@ -83,7 +83,7 @@
     .\Find-DCSync.ps1 -Path C:\Evidence\DC01-Security.evtx -DomainController DC01 -KnownReplicationAccount MSOL_a1b2c3 -OutputPath C:\Evidence\Out -Format All
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4662} | ConvertFrom-IRWinEvent | .\Find-DCSync.ps1 -DomainController DC01
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4662} -ErrorAction Ignore | ConvertFrom-IRWinEvent | .\Find-DCSync.ps1 -DomainController DC01
 
 .NOTES
     ATT&CK : T1003.006 (OS Credential Dumping: DCSync)

@@ -597,6 +597,55 @@ function Invoke-IRFileRead {
     [pscustomobject]@{ Records = @(); Skipped = 0; Fallback = $false; FilterErr = ''; Err = ''; BadSignature = $false }
 }
 
+function Invoke-IRLiveRead {
+    <#
+    .SYNOPSIS
+        Reads one live channel (one event-ID chunk, optionally remote) in the same isolated child runspace
+        as Invoke-IRFileRead, so a TERMINATING Get-WinEvent error (missing log or provider on this host,
+        access denied, RPC failure - all EventLogException throws that -ErrorAction SilentlyContinue does
+        not capture) is caught there and returned as text instead of leaking to the caller's -ErrorVariable.
+    #>
+    param([string]$LogName, [int[]]$Chunk, [string]$ProviderName, [bool]$HasStart, $StartTime, [bool]$HasEnd, $EndTime, [long]$MaxEvents, [string]$ComputerName, $Credential)
+    if (-not $script:IRFileReadRunspace -or $script:IRFileReadRunspace.RunspaceStateInfo.State -ne 'Opened') {
+        $script:IRFileReadRunspace = [runspacefactory]::CreateRunspace()
+        $script:IRFileReadRunspace.Open()
+        $m = $MyInvocation.MyCommand.Module
+        $script:IRFileReadOwnedByModule = [bool]$m
+        if ($m) { $m.OnRemove = { if ($script:IRFileReadRunspace) { try { $script:IRFileReadRunspace.Dispose() } catch { } } } }
+    }
+    $child = {
+        param($log, $ids, $prov, $hasStart, $start, $hasEnd, $end, $max, $computer, $cred)
+        $out = New-Object System.Collections.Generic.List[object]; $err = ''; $fq = ''
+        try {
+            $fh = @{ LogName = $log }
+            if ($ids) { $fh['Id'] = $ids }
+            if ($prov) { $fh['ProviderName'] = $prov }
+            if ($hasStart) { $fh['StartTime'] = $start }
+            if ($hasEnd) { $fh['EndTime'] = $end }
+            $g = @{ FilterHashtable = $fh; ErrorAction = 'Stop' }
+            if ($max -gt 0) { $g['MaxEvents'] = $max }
+            if ($computer) { $g['ComputerName'] = $computer }
+            if ($cred) { $g['Credential'] = $cred }
+            foreach ($r in @(Get-WinEvent @g)) { try { $null = $r.ToXml() } catch { continue }; $out.Add($r) }
+        }
+        catch {
+            $fq = [string]$_.FullyQualifiedErrorId
+            if ($fq -notlike 'NoMatchingEventsFound*') { $err = [string]$_.Exception.Message }
+        }
+        , [pscustomobject]@{ Records = $out.ToArray(); Err = $err; ErrorId = $fq }
+    }
+    $ps = [powershell]::Create()
+    $ps.Runspace = $script:IRFileReadRunspace
+    try {
+        $null = $ps.AddScript($child.ToString()).AddArgument($LogName).AddArgument($Chunk).AddArgument($ProviderName).AddArgument($HasStart).AddArgument($StartTime).AddArgument($HasEnd).AddArgument($EndTime).AddArgument($MaxEvents).AddArgument($ComputerName).AddArgument($Credential)
+        $res = $ps.Invoke()
+        if ($res -and $res.Count -gt 0 -and $res[0]) { return $res[0] }
+    }
+    catch { }
+    finally { $ps.Dispose() }
+    [pscustomobject]@{ Records = @(); Err = ''; ErrorId = '' }
+}
+
 function Get-IRWinEvent {
     <#
     .SYNOPSIS
@@ -661,24 +710,6 @@ function Get-IRWinEvent {
         $chunkIdx = -1
         foreach ($chunk in $idChunks) {
             $chunkIdx++
-            $fh = @{}
-            if ($PSCmdlet.ParameterSetName -eq 'File') { $fh['Path'] = $target } else { $fh['LogName'] = $target }
-            if ($chunk) { $fh['Id'] = $chunk }
-            if ($ProviderName) { $fh['ProviderName'] = $ProviderName }
-            if ($hasStart) { $fh['StartTime'] = $StartTime }
-            if ($hasEnd) { $fh['EndTime'] = $EndTime }
-
-            # SilentlyContinue with a LOCAL -ErrorVariable: this consumes the error record here so it
-            # never propagates to a caller's -ErrorVariable (which would pollute a tool's error output).
-            # We then inspect the captured record ourselves to emit a helpful warning. Using Stop/try-catch
-            # or a bare SilentlyContinue would leak the record to the ancestor; -ErrorVariable contains it.
-            $gwe = @{ FilterHashtable = $fh; ErrorAction = 'SilentlyContinue' }
-            if ($MaxEvents -gt 0) { $gwe['MaxEvents'] = $MaxEvents }
-            if ($PSCmdlet.ParameterSetName -eq 'Live') {
-                if ($ComputerName) { $gwe['ComputerName'] = $ComputerName }
-                if ($Credential) { $gwe['Credential'] = $Credential }
-            }
-
             $desc = $target
             if ($chunk) { $desc += ' ids=' + ($chunk -join ',') }
             Write-Verbose "Get-WinEvent $desc"
@@ -705,33 +736,38 @@ function Get-IRWinEvent {
                 }
                 continue
             }
-            $gweErr = $null
-            Get-WinEvent @gwe -ErrorVariable gweErr 2>$null
-            foreach ($er in @($gweErr)) {
-                $fq = [string]$er.FullyQualifiedErrorId
-                $msg = [string]$er.Exception.Message
-                if ($fq -like 'NoMatchingEventsFound*') { Write-Verbose "No events: $desc"; continue }
+            # Live reads use the same isolated child runspace as file reads: a missing log / provider on this
+            # host, access denied or an RPC failure is a TERMINATING EventLogException that no in-runspace
+            # -ErrorAction / -ErrorVariable can keep out of the caller's error output.
+            $res = Invoke-IRLiveRead -LogName $target -Chunk $chunk -ProviderName $ProviderName -HasStart $hasStart -StartTime $StartTime -HasEnd $hasEnd -EndTime $EndTime -MaxEvents $MaxEvents -ComputerName $ComputerName -Credential $Credential
+            if ($res.Err) {
+                $fq = [string]$res.ErrorId
+                $msg = [string]$res.Err
                 if ($msg -match 'Access is denied|Attempted to perform an unauthorized operation') {
                     Write-Warning "Access denied reading $desc - run elevated (or as a member of Event Log Readers)."
-                    continue
                 }
-                if ($msg -match 'The RPC server is unavailable') {
+                elseif ($msg -match 'The RPC server is unavailable') {
                     Write-Warning "Cannot reach $ComputerName (RPC unavailable). Check firewall 'Remote Event Log Management' rules."
-                    continue
                 }
-                if ($fq -like 'NoMatchingLogsFound*' -or $msg -match 'There is not an event log') {
+                elseif ($fq -like 'NoMatchingLogsFound*' -or $msg -match 'There is not an event log') {
                     Write-Warning "Log/channel not found: $desc"
-                    continue
+                    break      # the channel is absent on this host: the other ID chunks cannot succeed either
                 }
-                Write-Warning ("Error reading {0}: {1}" -f $desc, $msg)
+                elseif ($fq -like 'NoMatchingProvidersFound*' -or $msg -match 'There is not an event provider') {
+                    Write-Warning "Event provider not present on this host: $desc"
+                    break
+                }
+                else { Write-Warning ("Error reading {0}: {1}" -f $desc, $msg) }
+                continue
             }
+            foreach ($rec in @($res.Records)) { $rec }
         }
     }
     }
     finally {
         # Standalone (inlined) builds have no module to dispose the cached child runspace on unload, so release
         # it per call there; inside the module it is kept for reuse and disposed by OnRemove.
-        if ($PSCmdlet.ParameterSetName -eq 'File' -and $script:IRFileReadRunspace -and -not $script:IRFileReadOwnedByModule) {
+        if ($script:IRFileReadRunspace -and -not $script:IRFileReadOwnedByModule) {
             try { $script:IRFileReadRunspace.Dispose() } catch { }
             $script:IRFileReadRunspace = $null
         }
@@ -1699,10 +1735,14 @@ function Get-IRDomainControllers {
     .SYNOPSIS  Lists domain controllers (name, IP, site) via System.DirectoryServices; cached. Returns @() when not domain-joined.
     .PARAMETER Additional
         Extra DC names/IPs supplied by the analyst (e.g. when running offline against exported logs).
+    .PARAMETER NoDiscovery
+        Skip live AD discovery entirely (including the cached discovery result) and return only the
+        -Additional entries. This is what a tool's -NoADLookup switch maps to.
     #>
     [CmdletBinding()]
-    param([string[]]$Additional, [switch]$Forest, [switch]$Refresh)
-    if (-not $Refresh -and $null -ne $script:IRDomainControllerCache) { $list = $script:IRDomainControllerCache }
+    param([string[]]$Additional, [switch]$Forest, [switch]$Refresh, [switch]$NoDiscovery)
+    if ($NoDiscovery) { $list = @() }
+    elseif (-not $Refresh -and $null -ne $script:IRDomainControllerCache) { $list = $script:IRDomainControllerCache }
     else {
         $list = New-Object System.Collections.Generic.List[object]
         # Gate the live lookup on Test-IRAdAvailable. Calling GetCurrentDomain()/GetCurrentForest() on a
@@ -1733,11 +1773,11 @@ function Get-IRDomainControllers {
 }
 
 function Get-IRDomainControllerLookup {
-    <# .SYNOPSIS Hashtable of lower-case DC names (short + FQDN), IPs and machine accounts (NAME$) for fast membership tests. #>
+    <# .SYNOPSIS Hashtable of lower-case DC names (short + FQDN), IPs and machine accounts (NAME$) for fast membership tests. -NoDiscovery builds it from -Additional only (no live AD). #>
     [CmdletBinding()]
-    param([string[]]$Additional)
+    param([string[]]$Additional, [switch]$NoDiscovery)
     $lookup = @{}
-    foreach ($dc in @(Get-IRDomainControllers -Additional $Additional)) {
+    foreach ($dc in @(Get-IRDomainControllers -Additional $Additional -NoDiscovery:$NoDiscovery)) {
         if ($dc.Name) {
             $n = $dc.Name.ToLowerInvariant(); $lookup[$n] = $true
             $short = $n.Split('.')[0]; $lookup[$short] = $true; $lookup["$short`$"] = $true

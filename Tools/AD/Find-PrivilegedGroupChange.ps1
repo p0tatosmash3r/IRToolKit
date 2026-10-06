@@ -27,16 +27,17 @@
         (MemberName DN / MemberSid) to which group.
       * Rule 2 - privileged group REMOVE (Medium). Attackers remove accounts to undo temporary
         elevation or to evict legitimate administrators.
-      * Rule 3 - stealth add-then-remove (High). The same member is added to AND removed from the
-        same privileged group within -StealthWindowMinutes (default 30), correlated on
+      * Rule 3 - stealth add-then-remove (High; Informational/Low when BOTH the add and remove actors
+        are in -KnownAdmin - the PAM / just-in-time elevation case). The same member is added to AND
+        removed from the same privileged group within -StealthWindowMinutes (default 30), correlated on
         (group, member). This "temporary elevation" is a strong attacker signature.
-      * Rule 4 - actor anomaly. A privileged ADD whose SubjectUserName is unexpected. When
+      * Rule 4 - actor anomaly (an annotation on the Rule 1 finding, not a separate finding). When
         -KnownAdmin is supplied, adds performed by a subject that is NOT in that list are called
-        out in the finding; otherwise the actor is simply noted for the analyst.
+        out in the Rule 1 description; otherwise the actor is simply noted for the analyst.
       * Rule 5 - capability groups (DnsAdmins, Backup Operators, Account/Server/Print Operators,
         Group Policy Creator Owners, ...) are privileged-by-capability rather than by RID. They
-        are matched by the module's privileged-group NAME list, so Rule 1 already covers them
-        (High, not Critical).
+        are matched by the module's privileged-group NAME list, so the Rule 1 finding already covers
+        them (High, not Critical); no separate finding is emitted.
 
     This tool is self-contained: all privileged-group decisions come from the module's static
     reference tables (Test-IRPrivilegedGroup / Get-IRPrivilegedGroupName /
@@ -99,7 +100,7 @@
     Analyse an exported log, flag adds by anyone outside the known-admin list, and export all report formats.
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4728,4732,4756,4729,4733,4757} | ConvertFrom-IRWinEvent | .\Find-PrivilegedGroupChange.ps1 -StealthWindowMinutes 15
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4728,4732,4756,4729,4733,4757} -ErrorAction Ignore | ConvertFrom-IRWinEvent | .\Find-PrivilegedGroupChange.ps1 -StealthWindowMinutes 15
 
 .NOTES
     ATT&CK : T1098 (Account Manipulation), T1078.002 (Valid Accounts: Domain Accounts)

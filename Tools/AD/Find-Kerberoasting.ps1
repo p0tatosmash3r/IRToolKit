@@ -61,7 +61,8 @@
 .PARAMETER NoADLookup
     Skip live Active Directory look-ups.
 .PARAMETER DomainController
-    Extra DC names / IPs (used to recognise machine-account requesters offline).
+    Accepted for Invoke-IRHunt parameter parity. The current rules identify machine accounts by name
+    (trailing $) and do not consult this list.
 .PARAMETER Threshold
     Distinct user service accounts (any cipher) in a window to raise the volume rule (default 10).
 .PARAMETER RC4Threshold
@@ -85,7 +86,7 @@
     .\Find-Kerberoasting.ps1 -Path C:\Evidence\DC01-Security.evtx -HoneypotAccount svc_decoy -OutputPath C:\Evidence\Out -Format All
 
 .EXAMPLE
-    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4769} | ConvertFrom-IRWinEvent | .\Find-Kerberoasting.ps1
+    Get-WinEvent -FilterHashtable @{LogName='Security';Id=4769} -ErrorAction Ignore | ConvertFrom-IRWinEvent | .\Find-Kerberoasting.ps1
 
 .NOTES
     ATT&CK : T1558.003 (Kerberoasting)
